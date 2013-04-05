@@ -4,9 +4,15 @@
 struct HashTable;
 
 struct HashTable *htbl_Create();
-void htbl_SetValueForKey(struct HashTable *table, void* value, char *key);
-void* htbl_ValueForKey(struct HashTable *table, char *key);
+
+void htbl_SetValueForKey(struct HashTable *table, void *value, char *key);
+
+void *htbl_ValueForKey(struct HashTable *table, char *key);
+
 void htbl_RemoveKey(struct HashTable *table, char *key);
-void htbl_Free(struct HashTable* table);
+
+size_t htbl_TableSize(struct HashTable *table);
+
+void htbl_Free(struct HashTable *table);
 
 #endif

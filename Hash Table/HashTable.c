@@ -16,22 +16,24 @@ struct HashTableElement
 	char *value;
 };
 
-struct HashTableElement * _MakeElement(char *key, void *value);
+struct HashTableElement *_MakeElement(char *key, void *value);
 
 void _SetValueInElement(struct HashTableElement *element, void *value);
+
 void _SetKeyInElement(struct HashTableElement *element, char *key);
+
 void _FreeElement(struct HashTableElement *element);
 
 #pragma mark Table Element Implementation
 
-struct HashTableElement * _MakeElement(char *key, void *value)
+struct HashTableElement *_MakeElement(char *key, void *value)
 {
-	struct HashTableElement *element = calloc(1,sizeof(struct HashTableElement));
+	struct HashTableElement *element = calloc(1, sizeof(struct HashTableElement));
 	if (element == NULL)
 	{
 		return NULL;
 	}
-	_SetKeyInElement(element,key);
+	_SetKeyInElement(element, key);
 	_SetValueInElement(element, value);
 	return element;
 }
@@ -70,18 +72,43 @@ struct HashTable
 };
 
 tindex_t _HashTableInitialSize();
+
 tindex_t _HashFunction(char *key, tindex_t limit);
+
 struct HashTable *_AllocateTable();
+
 void _InitTable(struct HashTable *table);
-struct HashTableElement * _ElementAtIndex(struct HashTable *table, tindex_t index);
-bool _IsElementForKey(struct HashTableElement *element,char *key);
+
+// Add Remove
+void _AddKeyValuePair(struct HashTable *table, char *key, void *value);
+
+void _RemoveKeyValuePairAtIndex(struct HashTable *table, tindex_t index);
+
+// Checkers
+bool _IsIndexSuitsForKey(struct HashTable *table, tindex_t index, char *key);
+
+bool _IsElementForKey(struct HashTableElement *element, char *key);
+
 bool _IsElementAtIndexEmpty(struct HashTable *table, tindex_t index);
-void _loopIncrement(tindex_t *variable, tindex_t increment, tindex_t maxValueExclusive);
+
 bool _IsElementAtIndexForKey(struct HashTable *table, tindex_t index, char *key);
-void _setKeyValuePairAtIndex(struct HashTable *table, char *key, void *value, tindex_t index);
-tindex_t _FindIndexForKey(struct HashTable *table, char *key, bool returnFirstEmpty);
-void _removeKeyValuePairAtIndex(struct HashTable *table, tindex_t index);
-void _resizeHashTable(struct HashTable *table,tindex_t newSize);
+
+// Setters
+void _SetKeyValuePairAtIndex(struct HashTable *table, char *key, void *value, tindex_t index);
+
+void _SetCollisionKeyValuePairAtIndex(struct HashTable *table, char *key, void *value, tindex_t index);
+
+// Getters
+struct HashTableElement *_ElementAtIndex(struct HashTable *table, tindex_t index);
+
+// Searching
+tindex_t _FindSuitableIndexForKey(struct HashTable *table, char *key, tindex_t startIndex);
+
+tindex_t _FindExistingIndexForKey(struct HashTable *table, char *key);
+
+void _resizeHashTable(struct HashTable *table, tindex_t newSize);
+
+void _loopIncrement(tindex_t *variable, tindex_t increment, tindex_t maxValueExclusive);
 
 #pragma mark Hash Table Implementation
 
@@ -92,7 +119,7 @@ struct HashTable *htbl_Create()
 	if (hashTable == NULL)
 		return NULL;
 
- 	_InitTable(hashTable);
+	_InitTable(hashTable);
 	return hashTable;
 }
 
@@ -137,7 +164,7 @@ void htbl_Free(struct HashTable *table)
 }
 
 #pragma mark Adding and Removing
-void htbl_SetValueForKey(struct HashTable *table, void* value, char *key)
+void htbl_SetValueForKey(struct HashTable *table, void *value, char *key)
 {
 	if (table == NULL)
 		return;
@@ -148,16 +175,14 @@ void htbl_SetValueForKey(struct HashTable *table, void* value, char *key)
 	if (value == NULL)
 		return;
 
-	if (table->size == table->count)
-		_resizeHashTable(table, table->count+1);
-
-	bool returnEmptyIndex = 1;
-
-	tindex_t index = _FindIndexForKey(table, key, returnEmptyIndex);
-	if (index < 0)
+	tindex_t index = _FindExistingIndexForKey(table, key);
+	if (index != -1)
+	{
+		_SetKeyValuePairAtIndex(table, key, value, index);
 		return;
+	}
 
-	_setKeyValuePairAtIndex(table, key, value, index);
+	_AddKeyValuePair(table, key, value);
 }
 
 void htbl_RemoveKey(struct HashTable *table, char *key)
@@ -169,15 +194,14 @@ void htbl_RemoveKey(struct HashTable *table, char *key)
 	if (strlen(key) == 0)
 		return;
 
-	bool returnsEmpty = 0;
-	tindex_t index = _FindIndexForKey(table, key, returnsEmpty);
-	if (index < 0)
+	tindex_t index = _FindExistingIndexForKey(table, key);
+	if (index == -1)
 		return;
 
-	_removeKeyValuePairAtIndex(table, index);
+	_RemoveKeyValuePairAtIndex(table, index);
 }
 
-void* htbl_ValueForKey(struct HashTable *table, char *key)
+void *htbl_ValueForKey(struct HashTable *table, char *key)
 {
 	if (table == NULL)
 		return NULL;
@@ -186,8 +210,7 @@ void* htbl_ValueForKey(struct HashTable *table, char *key)
 	if (strlen(key) == 0)
 		return NULL;
 
-	bool returnEmptyIndex = 0;
-	tindex_t index = _FindIndexForKey(table, key, returnEmptyIndex);
+	tindex_t index = _FindExistingIndexForKey(table, key);
 	if (index < 0)
 		return NULL;
 
@@ -195,46 +218,88 @@ void* htbl_ValueForKey(struct HashTable *table, char *key)
 	return element->value;
 }
 
-
-/* Returns first empty index if not found*/
-tindex_t _FindIndexForKey(struct HashTable *table, char *key, bool returnFirstEmpty)
+tindex_t _FindExistingIndexForKey(struct HashTable *table, char *key)
 {
-
-	tindex_t hashIndex = _HashFunction(key,table->hashLimit);
-	tindex_t currentIndex = hashIndex;
-
-	while(_IsElementAtIndexEmpty(table, currentIndex) == 0)
+	// Search in hash index
+	tindex_t desiredIndex = _HashFunction(key, table->hashLimit);
+	bool containsDesiredElement = _IsElementAtIndexForKey(table, desiredIndex, key);
+	if (containsDesiredElement)
 	{
-		if (_IsElementAtIndexForKey(table, currentIndex, key))
-			return currentIndex;
+		return desiredIndex;
+	}
+	// Search in collisions
+	struct KeyValueList *collisionList = table->collisionsList;
+	tindex_t collisionIndex = lst_ValueForKey(collisionList, key); // Will return -1 if not found
+	return collisionIndex;
+}
 
+void _AddKeyValuePair(struct HashTable *table, char *key, void *value)
+{
+	tindex_t desiredIndex = _HashFunction(key, table->hashLimit);
+	// Do the nice way
+	bool suits = _IsIndexSuitsForKey(table, desiredIndex, key);
+	if (suits)
+	{
+		_SetKeyValuePairAtIndex(table, key, value, desiredIndex);
+		return;
+	}
+	// Otherwise do collision way
+	tindex_t collisionIndex = _FindSuitableIndexForKey(table, key, desiredIndex);
+	if (collisionIndex != -1)
+	{
+		_SetCollisionKeyValuePairAtIndex(table, key, value, collisionIndex);
+		return;
+	}
+}
+
+tindex_t _FindSuitableIndexForKey(struct HashTable *table, char *key, tindex_t startIndex)
+{
+	tindex_t currentIndex = startIndex;
+
+	while (_IsIndexSuitsForKey(table, currentIndex, key) == 0)
+	{
 		_loopIncrement(&currentIndex, 1, table->size);
-		if (currentIndex == hashIndex) /* If made a full circle */
+		if (currentIndex == startIndex) /* If made a full circle */
 			return -1;
 	}
 
-	return returnFirstEmpty ? currentIndex : -1;
+	return currentIndex;
+}
+
+bool _IsIndexSuitsForKey(struct HashTable *table, tindex_t index, char *key)
+{
+	if (_IsElementAtIndexEmpty(table, index) == 1)
+	{
+		return 1;
+	}
+	if (_IsElementAtIndexForKey(table, index, key) == 1)
+	{
+		return 1;
+	}
+	return 0;
 }
 
 bool _IsElementAtIndexEmpty(struct HashTable *table, tindex_t index)
 {
-	struct HashTableElement * element = _ElementAtIndex(table, index);
+	struct HashTableElement *element = _ElementAtIndex(table, index);
 	return (element == NULL);
 }
 
 bool _IsElementAtIndexForKey(struct HashTable *table, tindex_t index, char *key)
 {
-	struct HashTableElement * element = _ElementAtIndex(table, index);
+	struct HashTableElement *element = _ElementAtIndex(table, index);
+	if (element == NULL)
+		return 0;
 	return _IsElementForKey(element, key);
 }
 
-struct HashTableElement * _ElementAtIndex(struct HashTable *table, tindex_t index)
+inline struct HashTableElement *_ElementAtIndex(struct HashTable *table, tindex_t index)
 {
 	struct HashTableElement **array = table->array;
 	return array[index];
 }
 
-bool _IsElementForKey(struct HashTableElement *element,char *key)
+bool _IsElementForKey(struct HashTableElement *element, char *key)
 {
 	char *elementKey = element->key;
 	int compareResult = strncmp(elementKey, key, STRING_MAX_LEN);
@@ -242,7 +307,7 @@ bool _IsElementForKey(struct HashTableElement *element,char *key)
 	return compareResult ? 0 : 1;
 }
 
-void _setKeyValuePairAtIndex(struct HashTable *table, char *key, void *value, tindex_t index)
+void _SetKeyValuePairAtIndex(struct HashTable *table, char *key, void *value, tindex_t index)
 {
 	struct HashTableElement *element = _ElementAtIndex(table, index);
 	if (element == NULL)
@@ -250,28 +315,46 @@ void _setKeyValuePairAtIndex(struct HashTable *table, char *key, void *value, ti
 		element = _MakeElement(key, value);
 		struct HashTableElement **array = table->array;
 		array[index] = element;
-		table->count++ ;
-	} else {
+		table->count++;
+	} else
+	{
 		_SetValueInElement(element, value);
 	}
 }
 
-void _removeKeyValuePairAtIndex(struct HashTable *table, tindex_t index)
+void _SetCollisionKeyValuePairAtIndex(struct HashTable *table, char *key, void *value, tindex_t index)
+{
+	struct KeyValueList *collisionList = table->collisionsList;
+	lst_SetValueForKey(collisionList, index, key);
+
+	_SetKeyValuePairAtIndex(table, key, value, index);
+}
+
+void _RemoveKeyValuePairAtIndex(struct HashTable *table, tindex_t index)
 {
 	struct HashTableElement **array = table->array;
+	//TODO Check collisions!
 	_FreeElement(array[index]);
 	array[index] = NULL;
+
 	table->count--;
 }
 
-void _resizeHashTable(struct HashTable *table,tindex_t newSize)
+size_t htbl_TableSize(struct HashTable *table)
 {
-	struct HashTableElement ** newArray = realloc(table->array,sizeof(struct HashTableElement *) * newSize );
+	if (table == NULL)
+		return 0;
+	return (size_t) table->size;
+}
+
+void _resizeHashTable(struct HashTable *table, tindex_t newSize)
+{
+	struct HashTableElement **newArray = realloc(table->array, sizeof(struct HashTableElement *) * newSize);
 	if (newArray == NULL)
 		return;
 
 	if (table->size < newSize)
-		memset(newArray+table->size, 0, sizeof(struct HashTableElement *)*(newSize - table->size));
+	memset(newArray + table->size, 0, sizeof(struct HashTableElement *) * (newSize - table->size));
 
 	table->array = newArray;
 	table->size = newSize;
@@ -299,13 +382,14 @@ tindex_t _HashFunction(char *key, tindex_t limit)
 inline void _loopIncrement(tindex_t *variable, tindex_t increment, tindex_t maxValueExclusive)
 {
 	tindex_t value = *variable;
-	tindex_t inc = abs((int)increment);
+	tindex_t inc = abs((int) increment);
 
-	if (value+inc >= maxValueExclusive)
+	if (value + inc >= maxValueExclusive)
 	{
-		*variable = (value+inc) % maxValueExclusive ;
-	}else{
-		*variable = value+inc;
+		*variable = (value + inc) % maxValueExclusive;
+	} else
+	{
+		*variable = value + inc;
 	}
 }
 

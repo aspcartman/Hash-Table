@@ -33,6 +33,12 @@
 	[self addObjectsToTable:1];
 }
 
+- (void) testAddTableSizeObjects
+{
+	size_t tableSize = htbl_TableSize(self.table);
+	[self addObjectsToTable:(NSUInteger) tableSize];
+}
+
 - (void) testAdd1e2Objects // Needs resizing to work
 {
 	[self addObjectsToTable:100];
@@ -112,7 +118,7 @@
 	} action = kAdd;
 	NSMutableDictionary *idealDictionary = [NSMutableDictionary dictionaryWithCapacity:ITERATIONS];
 	NSUInteger i = 0;
-	for ( i = 0; i < ITERATIONS; ++i)
+	for (i = 0; i < ITERATIONS; ++i)
 	{
 		if (action == kAdd)
 		{
@@ -139,7 +145,7 @@
 
 		action = arc4random() % 2;
 	}
-	NSLog(@"Made %u iterations",(unsigned int)i);
+	NSLog(@"Made %u iterations", (unsigned int) i);
 }
 #pragma mark Wrong Arguments
 - (void) testWrongArguments
