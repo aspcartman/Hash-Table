@@ -167,6 +167,59 @@
 	htbl_ValueForKey(self.table, NULL);
 
 	htbl_Free(NULL);
+
+	htbl_IteratorForTable(NULL);
+	htbl_IsValidIterator(NULL);
+	htbl_FreeIterator(NULL);
+}
+
+#pragma mark Iterator
+- (void) testIterator
+{
+	NSMutableDictionary *idealDictionary = [self addObjectsToTable:10];
+
+	// Test if keys match their values
+	struct HashTableIterator *iterator = htbl_IteratorForTable(self.table);
+	while (htbl_IsValidIterator(iterator))
+	{
+		void *iteratorValue = iterator->value;
+		void *tableValue = htbl_ValueForKey(self.table, iterator->key);
+
+		STAssertEquals(iteratorValue, tableValue, @"Key %s", iterator->key);
+		NSString *keyString = [NSString stringWithCString:iterator->key encoding:NSASCIIStringEncoding];
+		[idealDictionary removeObjectForKey:keyString];
+
+		iterator->next(iterator);
+	}
+
+	STAssertEquals(idealDictionary.count, (NSUInteger) 0, @"Iterator didn't iterate to the end");
+	STAssertNoThrow(iterator->next(iterator), @"Invalidated iterators must not crash anything");
+
+	htbl_FreeIterator(iterator);
+}
+
+- (void) testIteratorOnRemoving
+{
+	NSMutableDictionary *idealDictionary = [self addObjectsToTable:10];
+
+	// Test if keys match their values
+	struct HashTableIterator *iterator = htbl_IteratorForTable(self.table);
+	while (htbl_IsValidIterator(iterator))
+	{
+		htbl_RemoveKey(self.table, iterator->key);
+
+		NSString *keyString = [NSString stringWithCString:iterator->key encoding:NSASCIIStringEncoding];
+		[idealDictionary removeObjectForKey:keyString];
+
+		[self compareToDict:idealDictionary];
+
+		iterator->next(iterator);
+	}
+
+	STAssertEquals(idealDictionary.count, (NSUInteger) 0, @"Iterator didn't iterate to the end");
+	STAssertNoThrow(iterator->next(iterator), @"Invalidated iterators must not crash anything");
+
+	htbl_FreeIterator(iterator);
 }
 
 #pragma mark Memory Allocations Fails

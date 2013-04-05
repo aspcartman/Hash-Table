@@ -8,9 +8,11 @@
 #import "KeyValueListTests.h"
 #import "NSString+RandomString.h"
 #import "KeyValueList.h"
-@interface  KeyValueListTests ()
-@property (assign) struct KeyValueList *list;
+
+@interface KeyValueListTests ()
+@property(assign) struct KeyValueList *list;
 @end
+
 @implementation KeyValueListTests
 
 - (void) setUp
@@ -70,7 +72,7 @@
 			bool hasKeys = NO;
 			for (NSString *key in array)
 			{
-				if(![key isEqualToString:@""])
+				if (![key isEqualToString:@""])
 					hasKeys = YES;
 			}
 			if (hasKeys == NO)
@@ -82,9 +84,9 @@
 
 			NSString *keyString = @"";
 			NSUInteger index;
-			while([keyString isEqualToString:@""])
+			while ([keyString isEqualToString:@""])
 			{
-				index = arc4random()%array.count;
+				index = arc4random() % array.count;
 				keyString = array[index];
 			}
 			char *key = (char *) [keyString cStringUsingEncoding:NSASCIIStringEncoding];
@@ -92,7 +94,8 @@
 			lst_RemoveElementWithKey(self.list, key);
 			array[index] = @"";
 			array[i] = @"";
-		}else{
+		} else
+		{
 			STFail(@"WTF?");
 		}
 
@@ -116,6 +119,33 @@
 
 	lst_Free(NULL);
 }
+
+#pragma mark Iteration
+- (void) testIterator
+{
+	NSArray *array = [self addObjectsToList:100];
+	struct KeyValueListIterator *iterator = lst_IteratorForList(self.list);
+
+	for (NSString *keyString in array)
+	{
+		char *key = (char *) [keyString cStringUsingEncoding:NSASCIIStringEncoding];
+		long value = [array indexOfObject:keyString];
+
+		int notEqual = strcmp(key, iterator->key);
+		STAssertEquals(notEqual, 0, @"Wrong key");
+
+		STAssertEquals(value, iterator->value, @"Wrong value");
+
+		iterator->next(iterator);
+	}
+
+	STAssertEquals(iterator->key, (char *) NULL, @"After the end key must be NULL");
+	STAssertEquals(iterator->value, (long) 0, @"After the end value must be 0");
+	STAssertNoThrow(iterator->next(iterator), @"After the end we must no crash");
+
+	lst_FreeIterator(iterator);
+}
+
 #pragma mark Methods
 - (void) addAndRemoveObjects:(NSUInteger)count
 {
@@ -124,12 +154,11 @@
 	for (NSUInteger i = 0; i < count; ++i)
 	{
 		NSString *keyString = array[i];
-		char *key = (char*)[keyString cStringUsingEncoding:NSASCIIStringEncoding];
-		long value = (long)i;
+		char *key = (char *) [keyString cStringUsingEncoding:NSASCIIStringEncoding];
 
 		lst_RemoveElementWithKey(self.list, key);
 		long rValue = lst_ValueForKey(self.list, key);
-		STAssertEquals(rValue,(long)-1, @"After a removal value for this key should be -1");
+		STAssertEquals(rValue, (long) -1, @"After a removal value for this key should be -1");
 
 		array[i] = @"";
 		[self compareToArray:array];
@@ -140,11 +169,11 @@
 {
 	NSMutableArray *array = [NSMutableArray arrayWithCapacity:count];
 
-	for (NSUInteger i = 0; i < count; ++i )
+	for (NSUInteger i = 0; i < count; ++i)
 	{
 		NSString *keyString = [NSString randomStringWithLength:10];
-		char *key = (char*)[keyString cStringUsingEncoding:NSASCIIStringEncoding];
-		long value = (long)i;
+		char *key = (char *) [keyString cStringUsingEncoding:NSASCIIStringEncoding];
+		long value = (long) i;
 
 		array[i] = keyString;
 		lst_SetValueForKey(self.list, value, key);
@@ -154,15 +183,15 @@
 	return array;
 }
 
-- (void) compareToArray:(NSArray*)array
+- (void) compareToArray:(NSArray *)array
 {
-	for (NSUInteger i = 0; i < array.count; ++i )
+	for (NSUInteger i = 0; i < array.count; ++i)
 	{
 		NSString *keyString = array[i];
-		if (keyString == @"")
+		if ([keyString isEqualToString:@""])
 			continue;
-		char *key = (char*)[keyString cStringUsingEncoding:NSASCIIStringEncoding];
-		long value = (long)i;
+		char *key = (char *) [keyString cStringUsingEncoding:NSASCIIStringEncoding];
+		long value = (long) i;
 
 		long rValue = lst_ValueForKey(self.list, key);
 		STAssertEquals(rValue, value, @"List returned wrong value for key");
