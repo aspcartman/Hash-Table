@@ -17,11 +17,8 @@ struct HashTableElement
 };
 
 struct HashTableElement *_MakeElement(char *key, void *value);
-
 void _SetValueInElement(struct HashTableElement *element, void *value);
-
 void _SetKeyInElement(struct HashTableElement *element, char *key);
-
 void _FreeElement(struct HashTableElement *element);
 
 #pragma mark Table Element Implementation
@@ -71,65 +68,49 @@ struct HashTable
 
 };
 
-tindex_t _HashTableInitialSize();
-
 tindex_t _HashFunction(char *key, tindex_t limit);
-
-struct HashTable *_AllocateTable();
-
-void _InitTable(struct HashTable *table);
-
+struct HashTable *_AllocateTable(size_t size);
+void _InitTable(struct HashTable *table, size_t size);
 // Add Remove
 void _AddKeyValuePair(struct HashTable *table, char *key, void *value);
-
 void _RemoveKeyValuePairAtIndex(struct HashTable *table, tindex_t index);
-
 // Checkers
 bool _IsIndexSuitsForKey(struct HashTable *table, tindex_t index, char *key);
-
 bool _IsElementForKey(struct HashTableElement *element, char *key);
-
 bool _IsElementAtIndexEmpty(struct HashTable *table, tindex_t index);
-
 bool _IsElementAtIndexForKey(struct HashTable *table, tindex_t index, char *key);
-
 // Setters
 void _SetKeyValuePairAtIndex(struct HashTable *table, char *key, void *value, tindex_t index);
-
 void _SetCollisionKeyValuePairAtIndex(struct HashTable *table, char *key, void *value, tindex_t index);
-
 // Getters
 struct HashTableElement *_ElementAtIndex(struct HashTable *table, tindex_t index);
-
 // Searching
 tindex_t _FindSuitableIndexForKey(struct HashTable *table, char *key, tindex_t startIndex);
-
 tindex_t _FindExistingIndexForKey(struct HashTable *table, char *key);
 
 void _resizeHashTable(struct HashTable *table, tindex_t newSize);
-
 void _loopIncrement(tindex_t *variable, tindex_t increment, tindex_t maxValueExclusive);
 
 #pragma mark Hash Table Implementation
 
 #pragma mark Creation and Decommission
-struct HashTable *htbl_Create()
+struct HashTable *htbl_Create(size_t capacity)
 {
-	struct HashTable *hashTable = _AllocateTable();
+	struct HashTable *hashTable = _AllocateTable(capacity);
 	if (hashTable == NULL)
 		return NULL;
 
-	_InitTable(hashTable);
+	_InitTable(hashTable, capacity);
 	return hashTable;
 }
 
-struct HashTable *_AllocateTable()
+struct HashTable *_AllocateTable(size_t size)
 {
 	struct HashTable *hashTablePointer = calloc(1, sizeof(struct HashTable));
 	if (hashTablePointer == NULL)
 		return NULL;
 
-	hashTablePointer->array = calloc((size_t) _HashTableInitialSize(), sizeof(struct HashTableElement *));
+	hashTablePointer->array = calloc(size, sizeof(struct HashTableElement *));
 	if (hashTablePointer->array == NULL)
 	{
 		free(hashTablePointer);
@@ -141,15 +122,10 @@ struct HashTable *_AllocateTable()
 	return hashTablePointer;
 }
 
-void _InitTable(struct HashTable *table)
+void _InitTable(struct HashTable *table, size_t size)
 {
-	table->size = _HashTableInitialSize();
-	table->hashLimit = _HashTableInitialSize();
-}
-
-tindex_t _HashTableInitialSize()
-{
-	return 7; // I like number 7.
+	table->size = size;
+	table->hashLimit = size;
 }
 
 void htbl_Free(struct HashTable *table)
@@ -349,15 +325,7 @@ size_t htbl_TableSize(struct HashTable *table)
 
 void _resizeHashTable(struct HashTable *table, tindex_t newSize)
 {
-	struct HashTableElement **newArray = realloc(table->array, sizeof(struct HashTableElement *) * newSize);
-	if (newArray == NULL)
-		return;
 
-	if (table->size < newSize)
-	memset(newArray + table->size, 0, sizeof(struct HashTableElement *) * (newSize - table->size));
-
-	table->array = newArray;
-	table->size = newSize;
 }
 
 #pragma mark Hash

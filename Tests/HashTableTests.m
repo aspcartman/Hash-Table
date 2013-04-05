@@ -19,7 +19,7 @@
 @implementation HashTableTests
 - (void) setUp
 {
-	self.table = htbl_Create();
+	self.table = htbl_Create(10);
 }
 
 - (void) tearDown

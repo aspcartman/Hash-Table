@@ -3,7 +3,7 @@
 
 struct HashTable;
 
-struct HashTable *htbl_Create();
+struct HashTable *htbl_Create(size_t capacity);
 
 void htbl_SetValueForKey(struct HashTable *table, void *value, char *key);
 
