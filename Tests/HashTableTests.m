@@ -56,6 +56,12 @@
 	for (NSUInteger i = 0; i < count; ++i)
 	{
 		NSString *keyString = [NSString randomStringWithLength:KEY_LEN];
+		if ([idealDictionary objectForKey:keyString])
+		{
+			--i;
+			continue;
+		}
+
 		char *key = (char *) [keyString cStringUsingEncoding:NSASCIIStringEncoding];
 		NSDate *value = [NSDate date];
 
@@ -67,7 +73,6 @@
 
 	return idealDictionary;
 }
-
 
 #pragma mark Removing
 - (void) testAddAndRemove1Object
@@ -116,6 +121,17 @@
 - (void) testRandomAddAndRemove1e3times
 {
 	[self randomAddAndRemove:1000];
+}
+
+#pragma mark Change
+- (void) testReplaceValueForKey
+{
+	char key[] = "Any Key";
+	htbl_SetValueForKey(self.table, (void *) 1, key);
+	htbl_SetValueForKey(self.table, (void *) 2, key);
+
+	void *value = htbl_ValueForKey(self.table, key);
+	STAssertEquals(value, (void *) 2, @"Value should've been changed");
 }
 
 #pragma mark Random Adding and Removing
@@ -176,6 +192,8 @@
 	htbl_ValueForKey(NULL, whatever);
 	htbl_ValueForKey(self.table, emptyString);
 	htbl_ValueForKey(self.table, NULL);
+
+	htbl_TableSize(NULL);
 
 	htbl_Free(NULL);
 
@@ -269,6 +287,10 @@ extern long _HashFunction(char *key, long limit);
 	htbl_FreeIterator(iterator);
 }
 
+- (void) testIteratorOnTableGrowth
+{
+
+}
 #pragma mark Memory Allocations Fails
 
 #pragma mark Helper Functions

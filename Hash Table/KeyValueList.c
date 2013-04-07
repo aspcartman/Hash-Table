@@ -54,22 +54,26 @@ void lst_SetValueForKey(struct KeyValueList *list, long value, char *key)
 		return;
 	}
 
-	struct KeyValueListElement *lastElement = list->firstElement;
-	while (lastElement->next != NULL)
+	struct KeyValueListElement *element = list->firstElement;
+	for (; ;)
 	{
-		char *kKey = lastElement->key;
-		int cmp = strcmp(kKey, key);
+		int cmp = strcmp(element->key, key);
 		if (cmp == 0)
 		{
-			lastElement->value = value;
+			element->value = value;
 			return;
 		}
-		lastElement = lastElement->next;
+
+		if (element->next == NULL)
+			break;
+
+		element = element->next;
 	}
+
 	struct KeyValueListElement *newElement = _CreateElement(key, value);
 	if (newElement == NULL)
 		return;
-	lastElement->next = newElement;
+	element->next = newElement;
 }
 
 struct KeyValueListElement *_CreateElement(char *key, long value)

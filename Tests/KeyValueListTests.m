@@ -118,6 +118,20 @@
 	}
 }
 
+- (void) testRemoveFromEmpty
+{
+	lst_RemoveElementWithKey(self.list, "Any Key");
+}
+#pragma mark Change
+- (void) testChangeValue
+{
+	char key[] = "Lol";
+	lst_SetValueForKey(self.list, 1, key);
+	lst_SetValueForKey(self.list, 2, key);
+	long res = lst_ValueForKey(self.list, key);
+	STAssertEquals(res, (long) 2, @"Value should've been changed");
+}
+
 #pragma mark Wrong Arguments
 - (void) testWrongArguments
 {
@@ -131,6 +145,11 @@
 	lst_ValueForKey(self.list, NULL);
 
 	lst_Free(NULL);
+
+	lst_IteratorForList(NULL);
+	lst_IteratorForList(self.list); // Empty list is also invalid argument
+
+	lst_FreeIterator(NULL);
 }
 
 #pragma mark Iteration
