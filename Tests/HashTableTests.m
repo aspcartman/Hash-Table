@@ -10,7 +10,8 @@
 #import "HashTable.h"
 #import "NSString+RandomString.h"
 
-#define KEY_LEN 10
+#define KEY_LEN 4
+#define TABLE_LEN 10
 
 @interface HashTableTests ()
 @property(assign) struct HashTable *table;
@@ -19,7 +20,7 @@
 @implementation HashTableTests
 - (void) setUp
 {
-	self.table = htbl_Create(10);
+	self.table = htbl_Create(TABLE_LEN);
 }
 
 - (void) tearDown
@@ -84,7 +85,6 @@
 	[self addAndRemoveObjectsToTable:1000];
 }
 
-
 - (void) addAndRemoveObjectsToTable:(NSUInteger)count
 {
 	NSMutableDictionary *idealDictionary = [self addObjectsToTable:count];
@@ -108,17 +108,26 @@
 	}
 }
 
-#pragma mark Random Adding and Removing
-- (void) testRandomAddingAndRemoving
+- (void) testRandomAddAndRemove1e2times
 {
-#define ITERATIONS 10000
+	[self randomAddAndRemove:100];
+}
+
+- (void) testRandomAddAndRemove1e3times
+{
+	[self randomAddAndRemove:1000];
+}
+
+#pragma mark Random Adding and Removing
+- (void) randomAddAndRemove:(NSUInteger)iterations
+{
 	enum
 	{
 		kAdd = 0, kRemove = 1
 	} action = kAdd;
-	NSMutableDictionary *idealDictionary = [NSMutableDictionary dictionaryWithCapacity:ITERATIONS];
+	NSMutableDictionary *idealDictionary = [NSMutableDictionary dictionaryWithCapacity:iterations];
 	NSUInteger i = 0;
-	for (i = 0; i < ITERATIONS; ++i)
+	for (i = 0; i < iterations; ++i)
 	{
 		if (action == kAdd)
 		{
@@ -132,8 +141,10 @@
 		else if (action == kRemove)
 		{
 			if (idealDictionary.count == 0)
+			{
+				action = kAdd;
 				continue;
-
+			}
 			NSString *keyString = idealDictionary.allKeys[arc4random() % idealDictionary.count];
 			char *key = (char *) [keyString cStringUsingEncoding:NSASCIIStringEncoding];
 
@@ -145,8 +156,8 @@
 
 		action = arc4random() % 2;
 	}
-	NSLog(@"Made %u iterations", (unsigned int) i);
 }
+
 #pragma mark Wrong Arguments
 - (void) testWrongArguments
 {
@@ -171,6 +182,42 @@
 	htbl_IteratorForTable(NULL);
 	htbl_IsValidIterator(NULL);
 	htbl_FreeIterator(NULL);
+}
+
+#pragma mark Collisions
+extern long _HashFunction(char *key, long limit);
+#define COLISIONS 30
+
+- (void) testCollisions
+{
+	NSMutableDictionary *idealDictionary = [NSMutableDictionary dictionaryWithCapacity:11];
+	NSString *keyString = @"gg";
+	char *key = (char *) [keyString cStringUsingEncoding:NSASCIIStringEncoding];
+	long index = _HashFunction(key, htbl_TableSize(self.table));
+
+	htbl_SetValueForKey(self.table, (__bridge void *) keyString, key);
+	[idealDictionary setObject:keyString forKey:keyString];
+
+	for (int i = 0; i < COLISIONS; ++i)
+	{
+		NSString *newKeyString;
+		char *newKey;
+		long newIndex;
+		do
+		{
+			newKeyString = [NSString randomStringWithLength:2];
+			if ([idealDictionary objectForKey:newKeyString])
+				continue;
+
+			newKey = (char *) [newKeyString cStringUsingEncoding:NSASCIIStringEncoding];
+			newIndex = _HashFunction(key, htbl_TableSize(self.table));
+		} while (newIndex != index);
+
+		htbl_SetValueForKey(self.table, (__bridge void *) newKeyString, newKey);
+		[idealDictionary setObject:newKeyString forKey:newKeyString];
+
+		[self compareToDict:idealDictionary];
+	}
 }
 
 #pragma mark Iterator
@@ -237,4 +284,5 @@
 		STAssertEquals(myValue, idealValue, @"Value in ideal and mine dictionaries must be equal");
 	}
 }
+
 @end

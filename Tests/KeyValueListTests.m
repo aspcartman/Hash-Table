@@ -25,6 +25,10 @@
 	lst_Free(self.list);
 }
 
+- (NSUInteger) numberOfTestIterationsForTestWithSelector:(SEL)testMethod
+{
+	return 1;
+}
 #pragma mark Adding
 - (void) testAdd1Pair
 {
@@ -47,16 +51,25 @@
 	[self addAndRemoveObjects:100];
 }
 
-- (void) testRandomAddingAndRemoving
+- (void) testRandomAddAndRemove1e2times
 {
-#define ITERATIONS 10000
+	[self randomAddAndRemove:100];
+}
+
+- (void) testRandomAddAndRemove1e3times
+{
+	[self randomAddAndRemove:1000];
+}
+
+- (void) randomAddAndRemove:(NSUInteger)iterations
+{
 	enum
 	{
 		kAdd = 0, kRemove = 1
 	} action = kAdd;
-	NSMutableArray *array = [NSMutableArray arrayWithCapacity:ITERATIONS];
+	NSMutableArray *array = [NSMutableArray arrayWithCapacity:iterations];
 
-	for (NSUInteger i = 0; i < ITERATIONS; ++i)
+	for (NSUInteger i = 0; i < iterations; ++i)
 	{
 		if (action == kAdd)
 		{
@@ -83,7 +96,7 @@
 			}
 
 			NSString *keyString = @"";
-			NSUInteger index;
+			NSUInteger index = 0;
 			while ([keyString isEqualToString:@""])
 			{
 				index = arc4random() % array.count;
@@ -123,9 +136,10 @@
 #pragma mark Iteration
 - (void) testIterator
 {
-	NSArray *array = [self addObjectsToList:100];
-	struct KeyValueListIterator *iterator = lst_IteratorForList(self.list);
+	NSMutableArray *array = [self addObjectsToList:100];
+	[self compareToArray:array];
 
+	struct KeyValueListIterator *iterator = lst_IteratorForList(self.list);
 	for (NSString *keyString in array)
 	{
 		char *key = (char *) [keyString cStringUsingEncoding:NSASCIIStringEncoding];
@@ -142,7 +156,18 @@
 	STAssertEquals(iterator->key, (char *) NULL, @"After the end key must be NULL");
 	STAssertEquals(iterator->value, (long) 0, @"After the end value must be 0");
 	STAssertNoThrow(iterator->next(iterator), @"After the end we must no crash");
+	lst_FreeIterator(iterator);
 
+	iterator = lst_IteratorForList(self.list);
+	while (lst_IsIteratorValid(iterator))
+	{
+		lst_RemoveElementWithKey(self.list, iterator->key);
+		array[(NSUInteger) iterator->value] = @"";
+
+		[self compareToArray:array];
+
+		iterator->next(iterator);
+	}
 	lst_FreeIterator(iterator);
 }
 

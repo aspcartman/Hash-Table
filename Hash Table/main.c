@@ -6,8 +6,7 @@
 //  Copyright (c) 2013 __MyCompanyName__. All rights reserved.
 //
 
-#include "HashTable.h"
-
-int main(int argc, const char *argv[]) {
-    return 0;
+int main(int argc, const char *argv[])
+{
+	return 0;
 }

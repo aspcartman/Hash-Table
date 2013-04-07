@@ -14,6 +14,7 @@ struct KeyValueListElement
 struct KeyValueListIteratorInternal
 {
 	struct KeyValueListElement *currentElement;
+	struct KeyValueListElement *nextElement;
 };
 
 struct KeyValueList
@@ -46,15 +47,14 @@ void lst_SetValueForKey(struct KeyValueList *list, long value, char *key)
 	if (key == NULL)
 		return;
 
-	struct KeyValueListElement *lastElement = list->firstElement;
-
-	if (lastElement == NULL)
+	if (list->firstElement == NULL)
 	{
 		struct KeyValueListElement *newElement = _CreateElement(key, value);
 		list->firstElement = newElement;
 		return;
 	}
 
+	struct KeyValueListElement *lastElement = list->firstElement;
 	while (lastElement->next != NULL)
 	{
 		char *kKey = lastElement->key;
@@ -67,6 +67,8 @@ void lst_SetValueForKey(struct KeyValueList *list, long value, char *key)
 		lastElement = lastElement->next;
 	}
 	struct KeyValueListElement *newElement = _CreateElement(key, value);
+	if (newElement == NULL)
+		return;
 	lastElement->next = newElement;
 }
 
@@ -77,7 +79,7 @@ struct KeyValueListElement *_CreateElement(char *key, long value)
 	if (element == NULL)
 		return NULL;
 
-	/* Memory is managed by the hashtable */
+	/* We don't copy key string */
 	element->key = key;
 	element->value = value;
 	element->next = NULL;
@@ -91,29 +93,29 @@ void lst_RemoveElementWithKey(struct KeyValueList *list, char *key)
 		return;
 	if (key == NULL)
 		return;
+	if (list->firstElement == NULL)
+		return;
 
 	struct KeyValueListElement *element = list->firstElement;
 
-	if (element != NULL)
+	int cmp = strcmp(key, element->key);
+	if (cmp == 0)
 	{
-		char *kKey = element->key;
-		int cmp = strcmp(key, kKey);
-		if (cmp == 0)
-		{
-			list->firstElement = element->next;
-			return;
-		}
+		struct KeyValueListElement *elementToDelete = list->firstElement;
+		list->firstElement = list->firstElement->next;
+		free(elementToDelete);
+		return;
 	}
 
 	while (element->next != NULL)
 	{
 		char *kKey = element->next->key;
-		int cmp = strcmp(key, kKey);
+		cmp = strcmp(key, kKey);
 		if (cmp == 0)
 		{
-			struct KeyValueListElement *replacement = element->next;
-			element->next = replacement->next;
-			free(replacement);
+			struct KeyValueListElement *elementToDelete = element->next;
+			element->next = element->next->next;
+			free(elementToDelete);
 			return;
 		}
 		element = element->next;
@@ -161,6 +163,8 @@ void lst_Free(struct KeyValueList *list)
 struct KeyValueListIterator *_AllocateIterator();
 void _InitIterator(struct KeyValueListIterator *iterator, struct KeyValueList *list);
 void _IteratorNextFunction(struct KeyValueListIterator *iterator);
+void _InvalidateIterator(struct KeyValueListIterator *iterator);
+void _SetIteratorToElement(struct KeyValueListIterator *iterator, struct KeyValueListElement *element);
 
 struct KeyValueListIterator *lst_IteratorForList(struct KeyValueList *list)
 {
@@ -197,30 +201,47 @@ struct KeyValueListIterator *_AllocateIterator()
 
 void _InitIterator(struct KeyValueListIterator *iterator, struct KeyValueList *list)
 {
-	iterator->key = list->firstElement->key;
-	iterator->value = list->firstElement->value;
+	_SetIteratorToElement(iterator, list->firstElement);
 	iterator->next = _IteratorNextFunction;
 	iterator->list = list;
-	iterator->cheshire->currentElement = list->firstElement;
+}
+
+void _SetIteratorToElement(struct KeyValueListIterator *iterator, struct KeyValueListElement *element)
+{
+	iterator->key = element->key;
+	iterator->value = element->value;
+	iterator->cheshire->currentElement = element;
+	iterator->cheshire->nextElement = element->next;
 }
 
 void _IteratorNextFunction(struct KeyValueListIterator *iterator)
 {
-	if (iterator->key == NULL)
+	if (lst_IsIteratorValid(iterator) == 0)
 		return;
 
-	struct KeyValueListElement *nextElement = iterator->cheshire->currentElement->next;
+	struct KeyValueListElement *nextElement = iterator->cheshire->nextElement;
 	if (nextElement == NULL)
 	{
-		iterator->key = NULL;
-		iterator->value = 0;
-		iterator->cheshire->currentElement = NULL;
+		_InvalidateIterator(iterator);
 		return;
 	}
 
-	iterator->cheshire->currentElement = nextElement;
-	iterator->key = nextElement->key;
-	iterator->value = nextElement->value;
+	_SetIteratorToElement(iterator, nextElement);
+}
+
+void _InvalidateIterator(struct KeyValueListIterator *iterator)
+{
+	iterator->key = NULL;
+	iterator->value = 0;
+	iterator->cheshire->currentElement = NULL;
+}
+
+int8_t lst_IsIteratorValid(struct KeyValueListIterator *iterator)
+{
+	if (iterator->cheshire->currentElement == NULL)
+		return 0;
+	else
+		return 1;
 }
 
 void lst_FreeIterator(struct KeyValueListIterator *iterator)
