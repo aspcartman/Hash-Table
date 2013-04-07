@@ -68,10 +68,10 @@ struct HashTable
 
 // Creation
 static struct HashTable *_AllocateTable(size_t size);
-static void _InitTable(struct HashTable *table, size_t size);
+static struct HashTable *_InitTable(struct HashTable *table, size_t size);
 // Destruction
-void _FreeTableContentsButLeaveStruct(struct HashTable *table);
-void _FreeTableStructButLeakContents(struct HashTable *table);
+static void _FreeTableContentsButLeaveStruct(struct HashTable *table);
+static void _FreeTableStructButLeakContents(struct HashTable *table);
 // Add
 static void _AddKeyValuePair(struct HashTable *table, char *key, void *value);
 // Remove
@@ -94,7 +94,6 @@ static tindex_t _FindExistingIndexForKey(struct HashTable *table, char *key);
 // Optimization
 static void _OptimizeTable(struct HashTable *table);
 static void _ResizeTable(struct HashTable *table, size_t newSize);
-static void _CloneTableAndDestroyOrig(struct HashTable *sourceTable, struct HashTable *destinationTable);
 // Stuff
 static void _loopIncrement(tindex_t *variable, tindex_t increment, tindex_t maxValueExclusive);
 tindex_t _HashFunction(char *key, tindex_t limit);
@@ -106,7 +105,7 @@ struct HashTable *htbl_Create(size_t capacity)
 	if (hashTable == NULL)
 		return NULL;
 
-	_InitTable(hashTable, capacity);
+	hashTable = _InitTable(hashTable, capacity);
 	return hashTable;
 }
 
@@ -123,16 +122,35 @@ static struct HashTable *_AllocateTable(size_t size)
 		return NULL;
 	}
 
-	hashTablePointer->iteratorKVList = lst_CreateList();
-	hashTablePointer->collisionsList = lst_CreateList();
 	return hashTablePointer;
 }
 
-static void _InitTable(struct HashTable *table, size_t size)
+static struct HashTable *_InitTable(struct HashTable *table, size_t size)
 {
+	// How to beautify this section?
+	table->iteratorKVList = lst_CreateList();
+	if (table->iteratorKVList == NULL)
+	{
+		free(table->array);
+		free(table);
+		return NULL;
+	}
+
+	table->collisionsList = lst_CreateList();
+	if (table->collisionsList == NULL)
+	{
+		free(table->iteratorKVList);
+		free(table->array);
+		free(table);
+		return NULL;
+	}
+
 	table->size = size;
 	table->hashLimit = size;
+
+	return table;
 }
+
 #pragma mark Destruction
 void htbl_Free(struct HashTable *table)
 {
@@ -143,7 +161,7 @@ void htbl_Free(struct HashTable *table)
 	_FreeTableStructButLeakContents(table);
 }
 
-void _FreeTableContentsButLeaveStruct(struct HashTable *table)
+static void _FreeTableContentsButLeaveStruct(struct HashTable *table)
 {
 	struct HashTableIterator *iterator = htbl_IteratorForTable(table);
 	while (htbl_IsValidIterator(iterator))
@@ -158,7 +176,7 @@ void _FreeTableContentsButLeaveStruct(struct HashTable *table)
 	free(table->array);
 }
 
-void _FreeTableStructButLeakContents(struct HashTable *table)
+static void _FreeTableStructButLeakContents(struct HashTable *table)
 {
 	free(table);
 }

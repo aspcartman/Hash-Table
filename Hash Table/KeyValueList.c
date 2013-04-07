@@ -22,8 +22,8 @@ struct KeyValueList
 	struct KeyValueListElement *firstElement;
 };
 
-struct KeyValueList *_allocateList();
-struct KeyValueListElement *_CreateElement(char *key, long value);
+static struct KeyValueList *_allocateList();
+static struct KeyValueListElement *_CreateElement(char *key, long value);
 
 #pragma mark Implementation
 
@@ -33,7 +33,7 @@ struct KeyValueList *lst_CreateList()
 	return list;
 }
 
-struct KeyValueList *_allocateList()
+static struct KeyValueList *_allocateList()
 {
 	size_t size = sizeof(struct KeyValueList);
 	struct KeyValueList *list = calloc(1, size);

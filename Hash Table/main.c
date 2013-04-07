@@ -8,5 +8,6 @@
 
 int main(int argc, const char *argv[])
 {
+	// What is the purport of life?
 	return 0;
 }
