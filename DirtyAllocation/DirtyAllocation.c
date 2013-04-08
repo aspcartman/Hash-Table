@@ -1,26 +1,37 @@
+#include "DirtyAllocation.h"
 #include <stdlib.h>
 #include <dlfcn.h>
 #import <mm_malloc.h>
 #import <stdio.h>
 #include <execinfo.h>
 #import <string.h>
-#include "DirtyAllocation.h"
 
 
 struct DA_Symbols
 {
-	char *dirtyPrefixes[DIRTY_PREFIXES_COUNT];
+	char *monsterKill[MONSTERKILL_PREFIXES_COUNT];
+	size_t monsterKillCount;
+
+	char *dirty[DIRTY_PREFIXES_COUNT];
+	size_t dirtyCount;
+
 	char *blackList[BLACKLISTED_PREFIXES_COUNT];
+	size_t blackListCount;
 };
-static struct DA_Symbols smbls = {{DIRTY_PREFIXES}, {BLACKLISTED_PREFIXES}};
+static struct DA_Symbols smbls = {
+		{MONSTERKILL_PREFIXES}, MONSTERKILL_PREFIXES_COUNT,
+		{DIRTY_PREFIXES}, DIRTY_PREFIXES_COUNT,
+		{BLACKLISTED_PREFIXES}, BLACKLISTED_PREFIXES_COUNT};
 
 static void *(*r_calloc)(size_t, size_t) = NULL;
 static void *(*r_malloc)(size_t) = NULL;
 
 static bool _shouldReturnNull();
 static int getBacktrace(Dl_info *output, size_t len);
+static bool backtraceContainsMonsterKillSymbol(Dl_info *backtrace, int backtraceSize);
 static bool backtraceContainsBlackListedSymbol(Dl_info *backtrace, int backtraceSize);
 static bool backtraceContainsDirtyPrefixes(Dl_info *backtrace, int backtraceSize);
+static bool backtraceContainsPrefixesFromArray(Dl_info *backtrace, int backtraceSize, char **prefixArray, int count);
 static bool backtraceContainsSymbolStartingWith(Dl_info *backtrace, int backtraceSize, char *string);
 static void print_trace(void);
 
@@ -29,10 +40,7 @@ void *malloc(size_t size)
 	if (r_malloc == NULL)
 		r_malloc = dlsym(RTLD_NEXT, "malloc");
 
-	static int x = 0;
-	++x;
-
-	if (x % AGGRESIVENESS == 0 && _shouldReturnNull())
+	if (_shouldReturnNull())
 		return NULL;
 	else
 		return r_malloc(size);
@@ -43,10 +51,7 @@ void *calloc(size_t nmemb, size_t size)
 	if (r_calloc == NULL)
 		r_calloc = dlsym(RTLD_NEXT, "calloc");
 
-	static int x = 0;
-	++x;
-
-	if (x % AGGRESIVENESS == 0 && _shouldReturnNull())
+	if (_shouldReturnNull())
 		return NULL;
 	else
 		return r_calloc(nmemb, size);
@@ -59,13 +64,16 @@ static bool _shouldReturnNull()
 	Dl_info backtrace[10] = {0};
 	int backtraceLen = getBacktrace(backtrace, 10);
 
+	bool containsMonsterKill = backtraceContainsMonsterKillSymbol(backtrace, backtraceLen);
 	bool containsBlackListed = backtraceContainsBlackListedSymbol(backtrace, backtraceLen);
+	bool containsDirty = backtraceContainsDirtyPrefixes(backtrace, backtraceLen);
+
 	if (containsBlackListed == true)
 		return false;
-
-	bool containsDirty = backtraceContainsDirtyPrefixes(backtrace, backtraceLen);
-	if (containsDirty == true)
+	if (containsMonsterKill == true)
 		return true;
+	if (containsDirty == true)
+		return (arc4random() % AGGRESSIVENESS) ? false : true;
 
 	return false;
 }
@@ -94,24 +102,26 @@ static int getBacktrace(Dl_info *output, size_t len)
 	return finalSize;
 }
 
+static bool backtraceContainsMonsterKillSymbol(Dl_info *backtrace, int backtraceSize)
+{
+	return backtraceContainsPrefixesFromArray(backtrace, backtraceSize, smbls.monsterKill, smbls.monsterKillCount);
+}
+
 static bool backtraceContainsBlackListedSymbol(Dl_info *backtrace, int backtraceSize)
 {
-
-	for (int i = 0; i < BLACKLISTED_PREFIXES_COUNT; ++i)
-	{
-		char *symbolPrefix = smbls.blackList[i];
-		bool contains = backtraceContainsSymbolStartingWith(backtrace, backtraceSize, symbolPrefix);
-		if (contains == true)
-			return 1;
-	}
-	return 0;
+	return backtraceContainsPrefixesFromArray(backtrace, backtraceSize, smbls.blackList, smbls.blackListCount);
 }
 
 static bool backtraceContainsDirtyPrefixes(Dl_info *backtrace, int backtraceSize)
 {
-	for (int i = 0; i < DIRTY_PREFIXES_COUNT; ++i)
+	return backtraceContainsPrefixesFromArray(backtrace, backtraceSize, smbls.dirty, smbls.dirtyCount);
+}
+
+static bool backtraceContainsPrefixesFromArray(Dl_info *backtrace, int backtraceSize, char **prefixArray, int count)
+{
+	for (int i = 0; i < count; ++i)
 	{
-		char *symbolPrefix = smbls.dirtyPrefixes[i];
+		char *symbolPrefix = prefixArray[i];
 		bool contains = backtraceContainsSymbolStartingWith(backtrace, backtraceSize, symbolPrefix);
 		if (contains == true)
 			return 1;
