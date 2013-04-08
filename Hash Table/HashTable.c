@@ -240,7 +240,7 @@ static void _RemoveKeyValuePair(struct HashTable *table, char *key)
 
 	_RemoveKeyValuePairAtIndex(table, index);
 	lst_RemoveElementWithKey(table->iteratorKVList, key);
-//	lst_RemoveElementWithKey(table->collisionsList, key);
+	lst_RemoveElementWithKey(table->collisionsList, key);
 }
 
 static void _RemoveKeyValuePairAtIndex(struct HashTable *table, tindex_t index)
