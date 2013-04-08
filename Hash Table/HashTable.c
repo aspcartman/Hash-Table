@@ -41,7 +41,9 @@ static void _SetValueInElement(struct HashTableElement *element, void *value)
 
 static void _SetKeyInElement(struct HashTableElement *element, char *key)
 {
-	/* Does not frees the previous element key */
+	/* Does not frees the previous element key,
+	 * because it's not intended to be used on already
+	  * initialized element */
 
 	size_t keyLen = strnlen(key, STRING_MAX_LEN);
 	element->key = malloc(keyLen * sizeof(char) + 1);
