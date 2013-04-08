@@ -18,9 +18,11 @@
 @end
 
 @implementation HashTableTests
+
 - (void) setUp
 {
 	self.table = htbl_Create(TABLE_LEN);
+	STAssertFalse(self.table == NULL, @"Table not created for testing");
 }
 
 - (void) tearDown
@@ -212,6 +214,10 @@ extern long _HashFunction(char *key, long limit);
 	NSMutableDictionary *idealDictionary = [NSMutableDictionary dictionaryWithCapacity:11];
 	NSString *keyString = @"gg";
 	char *key = (char *) [keyString cStringUsingEncoding:NSASCIIStringEncoding];
+	size_t sizeOfTable = htbl_TableSize(self.table);
+	if (sizeOfTable == 0)
+		return;
+
 	long index = _HashFunction(key, htbl_TableSize(self.table));
 
 	htbl_SetValueForKey(self.table, (__bridge void *) keyString, key);
@@ -259,7 +265,6 @@ extern long _HashFunction(char *key, long limit);
 	}
 
 	STAssertEquals(idealDictionary.count, (NSUInteger) 0, @"Iterator didn't iterate to the end");
-	STAssertNoThrow(iterator->next(iterator), @"Invalidated iterators must not crash anything");
 
 	htbl_FreeIterator(iterator);
 }
@@ -283,14 +288,22 @@ extern long _HashFunction(char *key, long limit);
 	}
 
 	STAssertEquals(idealDictionary.count, (NSUInteger) 0, @"Iterator didn't iterate to the end");
-	STAssertNoThrow(iterator->next(iterator), @"Invalidated iterators must not crash anything");
 
 	htbl_FreeIterator(iterator);
 }
 
 - (void) testIteratorOnTableGrowth
 {
+	[self addObjectsToTable:20];
+	struct HashTableIterator *iterator = htbl_IteratorForTable(self.table);
+	if (iterator == NULL)
+		return;
 
+	while (htbl_IsValidIterator(iterator))
+	{
+		[self addObjectsToTable:1];
+		iterator->next(iterator);
+	}
 }
 #pragma mark Memory Allocations Fails
 

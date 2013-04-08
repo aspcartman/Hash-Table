@@ -149,6 +149,15 @@
 	lst_IteratorForList(NULL);
 	lst_IteratorForList(self.list); // Empty list is also invalid argument
 
+	lst_IsIteratorValid(NULL);
+
+	lst_SetValueForKey(self.list, 1, "No matter");
+	struct KeyValueListIterator *it = lst_IteratorForList(self.list);
+	if (it == NULL)
+		return;
+	it->next(it);
+	it->next(it);
+
 	lst_FreeIterator(NULL);
 }
 
@@ -159,10 +168,21 @@
 	[self compareToArray:array];
 
 	struct KeyValueListIterator *iterator = lst_IteratorForList(self.list);
+	if (iterator == NULL)
+	{
+		STFail(@"No iterator");
+		return;
+	}
+
 	for (NSString *keyString in array)
 	{
 		char *key = (char *) [keyString cStringUsingEncoding:NSASCIIStringEncoding];
 		long value = [array indexOfObject:keyString];
+		if (iterator->key == NULL)
+		{
+			STFail(@"No key!");
+			break;
+		}
 
 		int notEqual = strcmp(key, iterator->key);
 		STAssertEquals(notEqual, 0, @"Wrong key");
