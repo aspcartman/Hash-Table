@@ -12,6 +12,7 @@
 		58E6603F170D4FC8002FF948 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 58E6603E170D4FC8002FF948 /* Cocoa.framework */; };
 		58E66049170D4FC9002FF948 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 58E66047170D4FC9002FF948 /* InfoPlist.strings */; };
 		58E6604C170D4FC9002FF948 /* HashTableTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 58E6604B170D4FC9002FF948 /* HashTableTests.m */; };
+		BE2131278D788FE25F03C117 /* DirtyAllocation.c in Sources */ = {isa = PBXBuildFile; fileRef = BE2135E0357FD9936C714951 /* DirtyAllocation.c */; };
 		BE21313EF82E13990D951D10 /* HashTable.c in Sources */ = {isa = PBXBuildFile; fileRef = BE2136E94014D893FA78C03C /* HashTable.c */; settings = {COMPILER_FLAGS = "-O0"; }; };
 		BE2131B4648B230BF9D911EA /* KeyValueListTests.m in Sources */ = {isa = PBXBuildFile; fileRef = BE2130323CFA6B6663F3E9C5 /* KeyValueListTests.m */; };
 		BE21325BF448E3D55DFC76A9 /* KeyValueList.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = BE213B9FF8E56A3EBB8E7076 /* KeyValueList.h */; };
@@ -37,6 +38,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		5889B35C17122F8A0037BEEE /* libDirtyAllocation.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libDirtyAllocation.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
 		58E6603A170D4FC8002FF948 /* Tests.octest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Tests.octest; sourceTree = BUILT_PRODUCTS_DIR; };
 		58E6603C170D4FC8002FF948 /* SenTestingKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SenTestingKit.framework; path = Library/Frameworks/SenTestingKit.framework; sourceTree = DEVELOPER_DIR; };
 		58E6603E170D4FC8002FF948 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
@@ -51,6 +53,7 @@
 		BE2130323CFA6B6663F3E9C5 /* KeyValueListTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = KeyValueListTests.m; sourceTree = "<group>"; };
 		BE2130583FA1CB769CDE09CB /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		BE2130A6A3560A9CD317F07B /* HashTable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HashTable.h; sourceTree = "<group>"; };
+		BE2135E0357FD9936C714951 /* DirtyAllocation.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = DirtyAllocation.c; path = DirtyAllocation/DirtyAllocation.c; sourceTree = SOURCE_ROOT; };
 		BE2135FC02D2F3659F5679BE /* KeyValueList.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = KeyValueList.c; sourceTree = "<group>"; };
 		BE2136E94014D893FA78C03C /* HashTable.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = HashTable.c; sourceTree = "<group>"; };
 		BE213A57D71499DABACED76C /* NSString+RandomString.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSString+RandomString.h"; sourceTree = "<group>"; };
@@ -61,6 +64,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		5889B35917122F8A0037BEEE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		58E66036170D4FC8002FF948 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -143,7 +153,17 @@
 				58E66044170D4FC8002FF948 /* Tests */,
 				58E6603B170D4FC8002FF948 /* Frameworks */,
 				BE213ADA72D541CF753C8C32 /* Products */,
+				BE213A7B50DD3049915E18DD /* DirtyAllocation */,
 			);
+			sourceTree = "<group>";
+		};
+		BE213A7B50DD3049915E18DD /* DirtyAllocation */ = {
+			isa = PBXGroup;
+			children = (
+				BE2135E0357FD9936C714951 /* DirtyAllocation.c */,
+			);
+			name = DirtyAllocation;
+			path = "Hash Table";
 			sourceTree = "<group>";
 		};
 		BE213ADA72D541CF753C8C32 /* Products */ = {
@@ -151,13 +171,41 @@
 			children = (
 				BE213C800D38EC586C4410CE /* Hash Table */,
 				58E6603A170D4FC8002FF948 /* Tests.octest */,
+				5889B35C17122F8A0037BEEE /* libDirtyAllocation.dylib */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
+/* Begin PBXHeadersBuildPhase section */
+		5889B35A17122F8A0037BEEE /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
 /* Begin PBXNativeTarget section */
+		5889B35B17122F8A0037BEEE /* DirtyAllocation */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5889B35F17122F8A0037BEEE /* Build configuration list for PBXNativeTarget "DirtyAllocation" */;
+			buildPhases = (
+				5889B35817122F8A0037BEEE /* Sources */,
+				5889B35917122F8A0037BEEE /* Frameworks */,
+				5889B35A17122F8A0037BEEE /* Headers */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DirtyAllocation;
+			productName = DirtyAllocation;
+			productReference = 5889B35C17122F8A0037BEEE /* libDirtyAllocation.dylib */;
+			productType = "com.apple.product-type.library.dynamic";
+		};
 		58E66039170D4FC8002FF948 /* Tests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 58E66050170D4FC9002FF948 /* Build configuration list for PBXNativeTarget "Tests" */;
@@ -212,6 +260,7 @@
 			targets = (
 				BE213C6ACA38525AAAD01716 /* Hash Table */,
 				58E66039170D4FC8002FF948 /* Tests */,
+				5889B35B17122F8A0037BEEE /* DirtyAllocation */,
 			);
 		};
 /* End PBXProject section */
@@ -244,6 +293,14 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		5889B35817122F8A0037BEEE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BE2131278D788FE25F03C117 /* DirtyAllocation.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		58E66035170D4FC8002FF948 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -280,6 +337,24 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		5889B35D17122F8A0037BEEE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXECUTABLE_PREFIX = lib;
+				INIT_ROUTINE = _initialize;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		5889B35E17122F8A0037BEEE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXECUTABLE_PREFIX = lib;
+				INIT_ROUTINE = _initialize;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
 		58E6604E170D4FC9002FF948 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -390,6 +465,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		5889B35F17122F8A0037BEEE /* Build configuration list for PBXNativeTarget "DirtyAllocation" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5889B35D17122F8A0037BEEE /* Release */,
+				5889B35E17122F8A0037BEEE /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		58E66050170D4FC9002FF948 /* Build configuration list for PBXNativeTarget "Tests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

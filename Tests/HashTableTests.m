@@ -206,6 +206,7 @@
 extern long _HashFunction(char *key, long limit);
 #define COLISIONS 30
 
+// TODO: Find a way to investigate rare failures. Is it a test or hashtable?
 - (void) testCollisions
 {
 	NSMutableDictionary *idealDictionary = [NSMutableDictionary dictionaryWithCapacity:11];
