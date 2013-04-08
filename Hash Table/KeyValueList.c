@@ -242,6 +242,9 @@ void _InvalidateIterator(struct KeyValueListIterator *iterator)
 
 int8_t lst_IsIteratorValid(struct KeyValueListIterator *iterator)
 {
+	if (iterator == NULL)
+		return 0;
+
 	if (iterator->cheshire->currentElement == NULL)
 		return 0;
 	else

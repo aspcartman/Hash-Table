@@ -29,8 +29,16 @@ static struct HashTableElement *_MakeElement(char *key, void *value)
 	{
 		return NULL;
 	}
+
 	_SetKeyInElement(element, key);
-	_SetValueInElement(element, value);
+	if (element->key == NULL)
+	{
+		free(element);
+		return NULL;
+	}
+
+	_SetValueInElement(element, value); /* Value is not being copied */
+
 	return element;
 }
 
@@ -47,6 +55,8 @@ static void _SetKeyInElement(struct HashTableElement *element, char *key)
 
 	size_t keyLen = strnlen(key, STRING_MAX_LEN);
 	element->key = malloc(keyLen * sizeof(char) + 1);
+	if (element->key == NULL)
+		return;
 	strncat(element->key, key, keyLen);
 }
 
@@ -86,12 +96,11 @@ static void _SetCollisionKeyValuePairAtIndex(struct HashTable *table, char *key,
 // Getters
 static struct HashTableElement *_ElementAtIndex(struct HashTable *table, tindex_t index);
 // Checkers
-static bool _IsIndexSuitsForKey(struct HashTable *table, tindex_t index, char *key);
 static bool _IsElementForKey(struct HashTableElement *element, char *key);
 static bool _IsElementAtIndexEmpty(struct HashTable *table, tindex_t index);
 static bool _IsElementAtIndexForKey(struct HashTable *table, tindex_t index, char *key);
 // Searching
-static tindex_t _FindSuitableIndexForKey(struct HashTable *table, char *key, tindex_t startIndex);
+static tindex_t _FindEmptyIndexForKey(struct HashTable *table, char *key, tindex_t startIndex);
 static tindex_t _FindExistingIndexForKey(struct HashTable *table, char *key);
 // Optimization
 static void _OptimizeTable(struct HashTable *table);
@@ -203,20 +212,24 @@ static void _AddKeyValuePair(struct HashTable *table, char *key, void *value)
 {
 	tindex_t index = _HashFunction(key, table->hashLimit);
 	// Do the nice way
-	bool suits = _IsIndexSuitsForKey(table, index, key);
-	if (suits)
+	bool empty = _IsElementAtIndexEmpty(table, index);
+	if (empty)
 	{
 		_SetKeyValuePairAtIndex(table, key, value, index);
 	} else
 			// Otherwise do collision way
 	{
-		index = _FindSuitableIndexForKey(table, key, index);
+		index = _FindEmptyIndexForKey(table, key, index);
 		if (index == -1)
 			return;
 
 		_SetCollisionKeyValuePairAtIndex(table, key, value, index);
 	}
-	// Either way, we must add keyvalue to the iterator KVList
+
+	tindex_t successfullyAddedIndex = _FindExistingIndexForKey(table, key);
+	if (successfullyAddedIndex == -1)
+		return;
+
 	struct KeyValueList *iteratorKVList = table->iteratorKVList;
 	lst_SetValueForKey(iteratorKVList, index, key);
 }
@@ -273,6 +286,8 @@ static void _SetKeyValuePairAtIndex(struct HashTable *table, char *key, void *va
 	if (element == NULL)
 	{
 		element = _MakeElement(key, value);
+		if (element == NULL)
+			return;
 
 		struct HashTableElement **array = table->array;
 		array[index] = element;
@@ -285,10 +300,14 @@ static void _SetKeyValuePairAtIndex(struct HashTable *table, char *key, void *va
 
 static void _SetCollisionKeyValuePairAtIndex(struct HashTable *table, char *key, void *value, tindex_t index)
 {
+	_SetKeyValuePairAtIndex(table, key, value, index);
+
+	struct HashTableElement *successfullyAddedElement = table->array[index];
+	if (successfullyAddedElement == NULL)
+		return;
+
 	struct KeyValueList *collisionList = table->collisionsList;
 	lst_SetValueForKey(collisionList, index, key);
-
-	_SetKeyValuePairAtIndex(table, key, value, index);
 }
 
 #pragma mark Getters
@@ -316,19 +335,6 @@ static inline struct HashTableElement *_ElementAtIndex(struct HashTable *table, 
 }
 
 #pragma mark Checkers
-static bool _IsIndexSuitsForKey(struct HashTable *table, tindex_t index, char *key)
-{
-	if (_IsElementAtIndexEmpty(table, index) == 1)
-	{
-		return 1;
-	}
-	if (_IsElementAtIndexForKey(table, index, key) == 1)
-	{
-		return 1;
-	}
-	return 0;
-}
-
 static bool _IsElementAtIndexEmpty(struct HashTable *table, tindex_t index)
 {
 	struct HashTableElement *element = _ElementAtIndex(table, index);
@@ -357,21 +363,23 @@ static tindex_t _FindExistingIndexForKey(struct HashTable *table, char *key)
 	// Search in hash index
 	tindex_t desiredIndex = _HashFunction(key, table->hashLimit);
 	bool containsDesiredElement = _IsElementAtIndexForKey(table, desiredIndex, key);
-	if (containsDesiredElement)
-	{
+	if (containsDesiredElement != 0)
 		return desiredIndex;
-	}
+
 	// Search in collisions
 	struct KeyValueList *collisionList = table->collisionsList;
 	tindex_t collisionIndex = lst_ValueForKey(collisionList, key); // Will return -1 if not found
-	return collisionIndex;
+	if (collisionIndex != -1)
+		return collisionIndex;
+
+	return -1;
 }
 
-static tindex_t _FindSuitableIndexForKey(struct HashTable *table, char *key, tindex_t startIndex)
+static tindex_t _FindEmptyIndexForKey(struct HashTable *table, char *key, tindex_t startIndex)
 {
 	tindex_t currentIndex = startIndex;
 
-	while (_IsIndexSuitsForKey(table, currentIndex, key) == 0)
+	while (_IsElementAtIndexEmpty(table, currentIndex) == 0)
 	{
 		_loopIncrement(&currentIndex, 1, table->size);
 		if (currentIndex == startIndex) /* If made a full circle */
@@ -391,7 +399,13 @@ static void _OptimizeTable(struct HashTable *table)
 static void _ResizeTable(struct HashTable *table, size_t newSize)
 {
 	struct HashTable *tmpTable = htbl_Create(newSize);
+	if (tmpTable == NULL)
+		return;
+
 	struct HashTableIterator *iterator = htbl_IteratorForTable(table);
+	if (iterator == NULL)
+		return;
+
 	while (htbl_IsValidIterator(iterator))
 	{
 		htbl_SetValueForKey(tmpTable, iterator->value, iterator->key);
@@ -445,7 +459,7 @@ struct HashTableIteratorInternal
 };
 
 static struct HashTableIterator *_AllocateIterator();
-static void _InitIterator(struct HashTableIterator *iterator, struct HashTable *table);
+static struct HashTableIterator *_InitIterator(struct HashTableIterator *iterator, struct HashTable *table);
 static void _InvalidateIterator(struct HashTableIterator *iterator);
 static void _IteratorNextFunction(struct HashTableIterator *iterator);
 
@@ -457,7 +471,10 @@ struct HashTableIterator *htbl_IteratorForTable(struct HashTable *table)
 		return NULL;
 
 	struct HashTableIterator *iterator = _AllocateIterator();
-	_InitIterator(iterator, table);
+	if (iterator == NULL)
+		return NULL;
+
+	iterator = _InitIterator(iterator, table);
 
 	return iterator;
 }
@@ -481,28 +498,25 @@ static struct HashTableIterator *_AllocateIterator()
 	return iterator;
 }
 
-static void _InitIterator(struct HashTableIterator *iterator, struct HashTable *table)
+static struct HashTableIterator *_InitIterator(struct HashTableIterator *iterator, struct HashTable *table)
 {
+	struct KeyValueListIterator *listIterator = lst_IteratorForList(table->iteratorKVList);
+	if (listIterator == NULL)
+		return NULL;
+
 	iterator->table = table;
-	struct KeyValueListIterator *listIterator = lst_IteratorForList(table->iteratorKVList); //TODO Error handling?
 	iterator->cheshire->listIterator = listIterator;
 	iterator->key = listIterator->key;
 	iterator->value = table->array[listIterator->value]->value;
 	iterator->next = _IteratorNextFunction;
+
+	return iterator;
 }
 
 static void _IteratorNextFunction(struct HashTableIterator *iterator)
 {
 	if (htbl_IsValidIterator(iterator) == 0)
 		return;
-
-	struct KeyValueList *listInIterator = iterator->cheshire->listIterator->list;
-	struct KeyValueList *listInTable = iterator->table->iteratorKVList;
-	if (listInIterator != listInTable)
-	{
-		_InvalidateIterator(iterator);
-		return;
-	}
 
 	struct KeyValueListIterator *listIterator = iterator->cheshire->listIterator;
 	listIterator->next(listIterator);
@@ -528,6 +542,12 @@ int htbl_IsValidIterator(struct HashTableIterator *iterator)
 		return 0;
 	if (iterator->key == NULL)
 		return 0;
+
+	struct KeyValueList *listInsideIterator = iterator->cheshire->listIterator->list;
+	struct KeyValueList *listInsideTable = iterator->table->iteratorKVList;
+	if (listInsideIterator != listInsideTable)
+		return 0;
+
 	return 1;
 }
 
