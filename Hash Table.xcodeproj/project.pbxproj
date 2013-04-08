@@ -17,6 +17,7 @@
 		BE2131B4648B230BF9D911EA /* KeyValueListTests.m in Sources */ = {isa = PBXBuildFile; fileRef = BE2130323CFA6B6663F3E9C5 /* KeyValueListTests.m */; };
 		BE21325BF448E3D55DFC76A9 /* KeyValueList.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = BE213B9FF8E56A3EBB8E7076 /* KeyValueList.h */; };
 		BE21339E084A42141D3FBB22 /* HashTable.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = BE2130A6A3560A9CD317F07B /* HashTable.h */; };
+		BE21373CA0D1E02F57DD10E2 /* DirtyAllocation.h in Headers */ = {isa = PBXBuildFile; fileRef = BE213FE35CEC7D9D0772A3DD /* DirtyAllocation.h */; };
 		BE213B6BD8DE00C9F1565D0B /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = BE2130583FA1CB769CDE09CB /* main.c */; };
 		BE213C270A678944005998A3 /* KeyValueList.c in Sources */ = {isa = PBXBuildFile; fileRef = BE2135FC02D2F3659F5679BE /* KeyValueList.c */; };
 		BE213D4CC1ABAC5E06CC816C /* KeyValueList.c in Sources */ = {isa = PBXBuildFile; fileRef = BE2135FC02D2F3659F5679BE /* KeyValueList.c */; };
@@ -61,6 +62,7 @@
 		BE213C800D38EC586C4410CE /* Hash Table */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "Hash Table"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BE213E3746A3AE23771643FA /* NSString+RandomString.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSString+RandomString.m"; sourceTree = "<group>"; };
 		BE213F47B835B0954EF301C2 /* KeyValueListTests.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = KeyValueListTests.h; sourceTree = "<group>"; };
+		BE213FE35CEC7D9D0772A3DD /* DirtyAllocation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DirtyAllocation.h; path = DirtyAllocation/DirtyAllocation.h; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -161,6 +163,7 @@
 			isa = PBXGroup;
 			children = (
 				BE2135E0357FD9936C714951 /* DirtyAllocation.c */,
+				BE213FE35CEC7D9D0772A3DD /* DirtyAllocation.h */,
 			);
 			name = DirtyAllocation;
 			path = "Hash Table";
@@ -183,6 +186,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BE21373CA0D1E02F57DD10E2 /* DirtyAllocation.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -341,7 +345,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXECUTABLE_PREFIX = lib;
-				INIT_ROUTINE = _initialize;
+				INIT_ROUTINE = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
@@ -350,7 +354,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				EXECUTABLE_PREFIX = lib;
-				INIT_ROUTINE = _initialize;
+				INIT_ROUTINE = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -417,6 +421,7 @@
 					"$(inherited)",
 				);
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_VERSION = "";
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
@@ -453,6 +458,7 @@
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
 				GCC_GENERATE_TEST_COVERAGE_FILES = YES;
 				GCC_INSTRUMENT_PROGRAM_FLOW_ARCS = YES;
+				GCC_VERSION = "";
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
