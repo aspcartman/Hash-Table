@@ -42,22 +42,23 @@ static struct HashTableElement *_MakeElement(char *key, void *value)
 	return element;
 }
 
-static void _SetValueInElement(struct HashTableElement *element, void *value)
-{
-	element->value = value;
-}
-
 static void _SetKeyInElement(struct HashTableElement *element, char *key)
 {
 	/* Does not frees the previous element key,
 	 * because it's not intended to be used on already
 	  * initialized element */
+	assert(element->key == NULL);
 
 	size_t keyLen = strnlen(key, STRING_MAX_LEN);
 	element->key = malloc(keyLen * sizeof(char) + 1);
 	if (element->key == NULL)
 		return;
 	strncat(element->key, key, keyLen);
+}
+
+static void _SetValueInElement(struct HashTableElement *element, void *value)
+{
+	element->value = value;
 }
 
 static void _FreeElement(struct HashTableElement *element)
@@ -174,7 +175,17 @@ void htbl_Free(struct HashTable *table)
 
 static void _FreeTableContentsButLeaveStruct(struct HashTable *table)
 {
+	// Ugly recursion code, but forces creation of an iterator for freeing
+	static int tries = 0;
 	struct HashTableIterator *iterator = htbl_IteratorForTable(table);
+	if (iterator == NULL && tries < 100)
+	{
+		++tries;
+		_FreeTableContentsButLeaveStruct(table);
+		tries = 0;
+		return;
+	}
+
 	while (htbl_IsValidIterator(iterator))
 	{
 		htbl_RemoveKey(table, iterator->key);
@@ -283,19 +294,20 @@ static void _SetValueForKey(struct HashTable *table, void *value, char *key)
 static void _SetKeyValuePairAtIndex(struct HashTable *table, char *key, void *value, tindex_t index)
 {
 	struct HashTableElement *element = _ElementAtIndex(table, index);
-	if (element == NULL)
-	{
-		element = _MakeElement(key, value);
-		if (element == NULL)
-			return;
-
-		struct HashTableElement **array = table->array;
-		array[index] = element;
-		table->count++;
-	} else
+	if (element != NULL)
 	{
 		_SetValueInElement(element, value);
+		return;
 	}
+
+	element = _MakeElement(key, value);
+	if (element == NULL)
+		return;
+
+	struct HashTableElement **array = table->array;
+	array[index] = element;
+	table->count++;
+
 }
 
 static void _SetCollisionKeyValuePairAtIndex(struct HashTable *table, char *key, void *value, tindex_t index)
@@ -502,7 +514,11 @@ static struct HashTableIterator *_InitIterator(struct HashTableIterator *iterato
 {
 	struct KeyValueListIterator *listIterator = lst_IteratorForList(table->iteratorKVList);
 	if (listIterator == NULL)
+	{
+		free(iterator->cheshire);
+		free(iterator);
 		return NULL;
+	}
 
 	iterator->table = table;
 	iterator->cheshire->listIterator = listIterator;

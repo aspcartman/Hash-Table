@@ -5,35 +5,51 @@
 #import <stdio.h>
 #include <execinfo.h>
 #import <string.h>
+#import <assert.h>
 
 
 struct DA_Symbols
 {
 	char *monsterKill[MONSTERKILL_PREFIXES_COUNT];
-	size_t monsterKillCount;
+	int monsterKillCount;
 
 	char *dirty[DIRTY_PREFIXES_COUNT];
-	size_t dirtyCount;
+	int dirtyCount;
 
 	char *blackList[BLACKLISTED_PREFIXES_COUNT];
-	size_t blackListCount;
+	int blackListCount;
+
+	char *traceList[TRACELIST_PREFIXES_COUNT];
+	int traceListCount;
 };
+
 static struct DA_Symbols smbls = {
 		{MONSTERKILL_PREFIXES}, MONSTERKILL_PREFIXES_COUNT,
 		{DIRTY_PREFIXES}, DIRTY_PREFIXES_COUNT,
-		{BLACKLISTED_PREFIXES}, BLACKLISTED_PREFIXES_COUNT};
+		{BLACKLISTED_PREFIXES}, BLACKLISTED_PREFIXES_COUNT,
+		{TRACELIST_PREFIXES}, TRACELIST_PREFIXES_COUNT};
+
+void **traceListArray = NULL;
+size_t traceListArrayLen = 0;
 
 static void *(*r_calloc)(size_t, size_t) = NULL;
 static void *(*r_malloc)(size_t) = NULL;
+static void *(*r_free)(void *) = NULL;
 
 static bool _shouldReturnNull();
+static bool _shouldTraceAllocation();
 static int getBacktrace(Dl_info *output, size_t len);
 static bool backtraceContainsMonsterKillSymbol(Dl_info *backtrace, int backtraceSize);
 static bool backtraceContainsBlackListedSymbol(Dl_info *backtrace, int backtraceSize);
 static bool backtraceContainsDirtyPrefixes(Dl_info *backtrace, int backtraceSize);
 static bool backtraceContainsPrefixesFromArray(Dl_info *backtrace, int backtraceSize, char **prefixArray, int count);
 static bool backtraceContainsSymbolStartingWith(Dl_info *backtrace, int backtraceSize, char *string);
+static bool backtraceContainsTracePrefixes(Dl_info *backtrace, int backtraceSize);
+
 static void print_trace(void);
+
+void addAllocationToTrace(void *ptr);
+void removeAllocationFromTrace(void *ptr);
 
 void *malloc(size_t size)
 {
@@ -42,8 +58,13 @@ void *malloc(size_t size)
 
 	if (_shouldReturnNull())
 		return NULL;
-	else
-		return r_malloc(size);
+
+	void *memporyPtr = r_malloc(size);
+
+	if (_shouldTraceAllocation() && memporyPtr != NULL)
+		addAllocationToTrace(memporyPtr);
+
+	return memporyPtr;
 }
 
 void *calloc(size_t nmemb, size_t size)
@@ -53,10 +74,24 @@ void *calloc(size_t nmemb, size_t size)
 
 	if (_shouldReturnNull())
 		return NULL;
-	else
-		return r_calloc(nmemb, size);
+
+	void *memporyPtr = r_calloc(nmemb, size);
+
+	if (_shouldTraceAllocation() && memporyPtr != NULL)
+		addAllocationToTrace(memporyPtr);
+
+	return memporyPtr;
 }
 
+void free(void *ptr)
+{
+	if (r_free == NULL)
+		r_free = dlsym(RTLD_NEXT, "free");
+
+	if (_shouldTraceAllocation())
+		removeAllocationFromTrace(ptr);
+	r_free(ptr);
+}
 #pragma mark Rutines
 
 static bool _shouldReturnNull()
@@ -75,6 +110,21 @@ static bool _shouldReturnNull()
 	if (containsDirty == true)
 		return (arc4random() % AGGRESSIVENESS) ? false : true;
 
+	return false;
+}
+
+static bool _shouldTraceAllocation()
+{
+	if (traceListArray == NULL)
+		return false;
+
+	Dl_info backtrace[10] = {0};
+	int backtraceLen = getBacktrace(backtrace, 10);
+
+	bool containsTraceSymbol = backtraceContainsTracePrefixes(backtrace, backtraceLen);
+
+	if (containsTraceSymbol)
+		return true;
 	return false;
 }
 
@@ -115,6 +165,11 @@ static bool backtraceContainsBlackListedSymbol(Dl_info *backtrace, int backtrace
 static bool backtraceContainsDirtyPrefixes(Dl_info *backtrace, int backtraceSize)
 {
 	return backtraceContainsPrefixesFromArray(backtrace, backtraceSize, smbls.dirty, smbls.dirtyCount);
+}
+
+static bool backtraceContainsTracePrefixes(Dl_info *backtrace, int backtraceSize)
+{
+	return backtraceContainsPrefixesFromArray(backtrace, backtraceSize, smbls.traceList, smbls.traceListCount);
 }
 
 static bool backtraceContainsPrefixesFromArray(Dl_info *backtrace, int backtraceSize, char **prefixArray, int count)
@@ -160,4 +215,41 @@ void print_trace(void)
 		printf("%s\n", strings[i]);
 	fpurge(stdout);
 	free(strings);
+}
+
+#pragma mark TraceListArray
+void StartTracing()
+{
+	traceListArray = r_calloc(0, sizeof(void *));
+}
+
+void addAllocationToTrace(void *ptr)
+{
+	traceListArray = realloc(traceListArray, traceListArrayLen + 1);
+	traceListArray[traceListArrayLen] = ptr;
+	traceListArrayLen += 1;
+}
+
+void removeAllocationFromTrace(void *ptr)
+{
+	for (size_t i = 0; i < traceListArrayLen; ++i)
+	{
+		if (traceListArray[i] == ptr)
+		{
+			traceListArray[i] = NULL;
+			return;
+		}
+	}
+}
+
+void StopTracing()
+{
+	for (int i = 0; i < traceListArrayLen; ++i)
+	{
+		if (traceListArray[i] != 0)
+		assert(0);
+	}
+	free(traceListArray);
+	traceListArray = NULL;
+	traceListArrayLen = 0;
 }

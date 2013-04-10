@@ -157,6 +157,7 @@
 		return;
 	it->next(it);
 	it->next(it);
+	lst_FreeIterator(it);
 
 	lst_FreeIterator(NULL);
 }

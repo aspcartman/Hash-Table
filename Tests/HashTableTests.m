@@ -6,6 +6,7 @@
 //
 //
 
+#include <dlfcn.h>
 #import "HashTableTests.h"
 #import "HashTable.h"
 #import "NSString+RandomString.h"
@@ -22,12 +23,17 @@
 - (void) setUp
 {
 	self.table = htbl_Create(TABLE_LEN);
-	STAssertFalse(self.table == NULL, @"Table not created for testing");
+	void (*startTracingLeaks)() = dlsym(RTLD_DEFAULT, "StartTracing");
+	if (startTracingLeaks != NULL)
+		startTracingLeaks();
 }
 
 - (void) tearDown
 {
 	htbl_Free(self.table);
+	void (*stopTracingLeaks)() = dlsym(RTLD_DEFAULT, "StopTracing");
+	if (stopTracingLeaks != NULL)
+		stopTracingLeaks();
 }
 
 #pragma mark Adding
@@ -304,6 +310,7 @@ extern long _HashFunction(char *key, long limit);
 		[self addObjectsToTable:1];
 		iterator->next(iterator);
 	}
+	htbl_FreeIterator(iterator);
 }
 #pragma mark Memory Allocations Fails
 
