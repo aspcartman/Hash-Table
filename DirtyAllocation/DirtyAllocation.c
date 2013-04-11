@@ -19,7 +19,7 @@ struct DA_Symbols
 	char *blackList[BLACKLISTED_PREFIXES_COUNT];
 	int blackListCount;
 
-	char *traceList[TRACELIST_PREFIXES_COUNT];
+	char *traceList[LEAK_PREFIXES_COUNT];
 	int traceListCount;
 };
 
@@ -27,7 +27,7 @@ static struct DA_Symbols smbls = {
 		{MONSTERKILL_PREFIXES}, MONSTERKILL_PREFIXES_COUNT,
 		{DIRTY_PREFIXES}, DIRTY_PREFIXES_COUNT,
 		{BLACKLISTED_PREFIXES}, BLACKLISTED_PREFIXES_COUNT,
-		{TRACELIST_PREFIXES}, TRACELIST_PREFIXES_COUNT};
+		{LEAK_PREFIXES}, LEAK_PREFIXES_COUNT};
 
 void **traceListArray = NULL;
 size_t traceListArrayLen = 0;
@@ -131,7 +131,7 @@ static bool _shouldTraceAllocation()
 static int getBacktrace(Dl_info *output, size_t len)
 {
 	void *returnAddresses[len];
-	int size = backtrace(returnAddresses, len);
+	int size = backtrace(returnAddresses, (int) len);
 
 	int finalSize = 0;
 	for (int i = 0; i < size; ++i, ++finalSize)
@@ -225,7 +225,7 @@ void StartTracing()
 
 void addAllocationToTrace(void *ptr)
 {
-	traceListArray = realloc(traceListArray, traceListArrayLen + 1);
+	traceListArray = realloc(traceListArray, sizeof(void *) * (traceListArrayLen + 1));
 	traceListArray[traceListArrayLen] = ptr;
 	traceListArrayLen += 1;
 }
@@ -246,8 +246,10 @@ void StopTracing()
 {
 	for (int i = 0; i < traceListArrayLen; ++i)
 	{
-		if (traceListArray[i] != 0)
-		assert(0);
+		if (traceListArray[i] == NULL)
+			continue;
+		printf("Leaked!\n");
+		assert(LEAK_ASSERT == false);
 	}
 	free(traceListArray);
 	traceListArray = NULL;

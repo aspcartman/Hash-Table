@@ -20,16 +20,17 @@
 	#define BLACKLISTED_PREFIXES_COUNT 1
  */
 
-#define MONSTERKILL_PREFIXES "_Resize"
+#define MONSTERKILL_PREFIXES
 #define MONSTERKILL_PREFIXES_COUNT 0
 
 #define DIRTY_PREFIXES "lst","htbl"
 #define DIRTY_PREFIXES_COUNT 2
 
-#define BLACKLISTED_PREFIXES "lst_Free", "htbl_Free", "lst_Remove", "htbl_Remove"
+#define BLACKLISTED_PREFIXES
 #define BLACKLISTED_PREFIXES_COUNT 0
 
-#define TRACELIST_PREFIXES "htbl","lst"
-#define TRACELIST_PREFIXES_COUNT 0
+#define LEAK_PREFIXES "htbl","lst"
+#define LEAK_PREFIXES_COUNT 2
+#define LEAK_ASSERT true
 
 #endif
