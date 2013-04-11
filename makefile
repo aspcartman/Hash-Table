@@ -1,7 +1,7 @@
 dirPath="$(shell xcodebuild -showBuildSettings | grep -m 1 "TEMP_ROOT" | grep -oEi '\/.*')"
 
 all:
-	xcodebuild -scheme "Tests With DirtyAllocation" OBJC_DISABLE_GC=YES CONFIGURATION_BUILD_DIR="$(CURDIR)/Build"
+	xcodebuild -project "Hash Table.xcodeproj" -scheme "Tests With DirtyAllocation" OBJC_DISABLE_GC=YES CONFIGURATION_BUILD_DIR="$(CURDIR)/Build"
 	open "$(dirPath)/Hash Table.build/Debug/Tests.build/Objects-normal/x86_64"
 
 test:
