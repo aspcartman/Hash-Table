@@ -50,6 +50,8 @@ void lst_SetValueForKey(struct KeyValueList *list, long value, char *key)
 	if (list->firstElement == NULL)
 	{
 		struct KeyValueListElement *newElement = _CreateElement(key, value);
+		if (newElement == NULL)
+			return;
 		list->firstElement = newElement;
 		return;
 	}
@@ -83,8 +85,15 @@ struct KeyValueListElement *_CreateElement(char *key, long value)
 	if (element == NULL)
 		return NULL;
 
-	/* We don't copy key string */
-	element->key = key;
+	size_t keyLen = strlen(key);
+	element->key = malloc(sizeof(char) * (keyLen + 1));
+	if (element->key == NULL)
+	{
+		free(element);
+		return NULL;
+	}
+
+	memcpy(element->key, key, keyLen + 1);
 	element->value = value;
 	element->next = NULL;
 
@@ -107,6 +116,7 @@ void lst_RemoveElementWithKey(struct KeyValueList *list, char *key)
 	{
 		struct KeyValueListElement *elementToDelete = list->firstElement;
 		list->firstElement = list->firstElement->next;
+		free(elementToDelete->key);
 		free(elementToDelete);
 		return;
 	}
@@ -119,6 +129,7 @@ void lst_RemoveElementWithKey(struct KeyValueList *list, char *key)
 		{
 			struct KeyValueListElement *elementToDelete = element->next;
 			element->next = element->next->next;
+			free(elementToDelete->key);
 			free(elementToDelete);
 			return;
 		}
@@ -156,6 +167,7 @@ void lst_Free(struct KeyValueList *list)
 	while (element)
 	{
 		struct KeyValueListElement *nElem = element->next;
+		free(element->key);
 		free(element);
 		element = nElem;
 	}

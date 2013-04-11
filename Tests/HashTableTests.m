@@ -22,6 +22,7 @@
 
 - (void) setUp
 {
+//	[self raiseAfterFailure];
 	self.table = htbl_Create(TABLE_LEN);
 	void (*startTracingLeaks)() = dlsym(RTLD_DEFAULT, "StartTracing");
 	if (startTracingLeaks != NULL)
@@ -202,7 +203,8 @@
 	htbl_ValueForKey(self.table, NULL);
 
 	htbl_TableSize(NULL);
-
+	htbl_Count(NULL);
+	htbl_Count(self.table);
 	htbl_Free(NULL);
 
 	htbl_IteratorForTable(NULL);
@@ -218,7 +220,7 @@ extern long _HashFunction(char *key, long limit);
 - (void) testCollisions
 {
 	NSMutableDictionary *idealDictionary = [NSMutableDictionary dictionaryWithCapacity:11];
-	NSString *keyString = @"gg";
+	NSString *keyString = @"hh";
 	char *key = (char *) [keyString cStringUsingEncoding:NSASCIIStringEncoding];
 	size_t sizeOfTable = htbl_TableSize(self.table);
 	if (sizeOfTable == 0)
@@ -254,7 +256,7 @@ extern long _HashFunction(char *key, long limit);
 #pragma mark Iterator
 - (void) testIterator
 {
-	NSMutableDictionary *idealDictionary = [self addObjectsToTable:10];
+	NSMutableDictionary *idealDictionary = [self addObjectsToTable:1000];
 
 	// Test if keys match their values
 	struct HashTableIterator *iterator = htbl_IteratorForTable(self.table);
@@ -277,16 +279,16 @@ extern long _HashFunction(char *key, long limit);
 
 - (void) testIteratorOnRemoving
 {
-	NSMutableDictionary *idealDictionary = [self addObjectsToTable:10];
+	NSMutableDictionary *idealDictionary = [self addObjectsToTable:100];
 
 	// Test if keys match their values
 	struct HashTableIterator *iterator = htbl_IteratorForTable(self.table);
 	while (htbl_IsValidIterator(iterator))
 	{
-		htbl_RemoveKey(self.table, iterator->key);
-
 		NSString *keyString = [NSString stringWithCString:iterator->key encoding:NSASCIIStringEncoding];
 		[idealDictionary removeObjectForKey:keyString];
+
+		htbl_RemoveKey(self.table, iterator->key);
 
 		[self compareToDict:idealDictionary];
 
@@ -312,7 +314,6 @@ extern long _HashFunction(char *key, long limit);
 	}
 	htbl_FreeIterator(iterator);
 }
-#pragma mark Memory Allocations Fails
 
 #pragma mark Helper Functions
 - (void) compareToDict:(NSDictionary *)dict

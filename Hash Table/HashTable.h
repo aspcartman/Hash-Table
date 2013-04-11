@@ -23,6 +23,7 @@ void *htbl_ValueForKey(struct HashTable *table, char *key);
 void htbl_RemoveKey(struct HashTable *table, char *key);
 
 size_t htbl_TableSize(struct HashTable *table);
+size_t htbl_Count(struct HashTable *table);
 
 struct HashTableIterator *htbl_IteratorForTable(struct HashTable *table);
 int htbl_IsValidIterator(struct HashTableIterator *iterator);

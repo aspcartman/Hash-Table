@@ -50,10 +50,12 @@ static void _SetKeyInElement(struct HashTableElement *element, char *key)
 	assert(element->key == NULL);
 
 	size_t keyLen = strnlen(key, STRING_MAX_LEN);
-	element->key = malloc(keyLen * sizeof(char) + 1);
+	assert(keyLen != 0);
+	element->key = malloc((keyLen + 1) * sizeof(char));
 	if (element->key == NULL)
 		return;
-	strncat(element->key, key, keyLen);
+	memcpy(element->key, key, keyLen + 1);
+	assert(strncmp(element->key, key, keyLen) == 0);
 }
 
 static void _SetValueInElement(struct HashTableElement *element, void *value)
@@ -90,6 +92,8 @@ static void _AddKeyValuePair(struct HashTable *table, char *key, void *value);
 // Remove
 static void _RemoveKeyValuePair(struct HashTable *table, char *key);
 static void _RemoveKeyValuePairAtIndex(struct HashTable *table, tindex_t index);
+bool _RemoveAllElementsUsingIterator(struct HashTable *table);
+void _RemoveAllElementsByHand(struct HashTable *table);
 // Setters
 static void _SetValueForKey(struct HashTable *table, void *value, char *key);
 static void _SetKeyValuePairAtIndex(struct HashTable *table, char *key, void *value, tindex_t index);
@@ -101,7 +105,7 @@ static bool _IsElementForKey(struct HashTableElement *element, char *key);
 static bool _IsElementAtIndexEmpty(struct HashTable *table, tindex_t index);
 static bool _IsElementAtIndexForKey(struct HashTable *table, tindex_t index, char *key);
 // Searching
-static tindex_t _FindEmptyIndexForKey(struct HashTable *table, char *key, tindex_t startIndex);
+static tindex_t _FindEmptyIndexAfterIndex(struct HashTable *table, tindex_t startIndex);
 static tindex_t _FindExistingIndexForKey(struct HashTable *table, char *key);
 // Optimization
 static void _OptimizeTable(struct HashTable *table);
@@ -175,27 +179,39 @@ void htbl_Free(struct HashTable *table)
 
 static void _FreeTableContentsButLeaveStruct(struct HashTable *table)
 {
-	// Ugly recursion code, but forces creation of an iterator for freeing
-	static int tries = 0;
-	struct HashTableIterator *iterator = htbl_IteratorForTable(table);
-	if (iterator == NULL && tries < 100)
-	{
-		++tries;
-		_FreeTableContentsButLeaveStruct(table);
-		tries = 0;
-		return;
-	}
+	bool succeed = _RemoveAllElementsUsingIterator(table);
+	if (succeed == 0)
+		_RemoveAllElementsByHand(table);
 
+	lst_Free(table->iteratorKVList);
+	lst_Free(table->collisionsList);
+	free(table->array);
+}
+
+bool _RemoveAllElementsUsingIterator(struct HashTable *table)
+{
+	struct HashTableIterator *iterator = htbl_IteratorForTable(table);
+	if (iterator == NULL)
+		return 0;
 	while (htbl_IsValidIterator(iterator))
 	{
 		htbl_RemoveKey(table, iterator->key);
 		iterator->next(iterator);
 	}
 	htbl_FreeIterator(iterator);
+	assert(table->count == 0);
+	return 1;
+}
 
-	lst_Free(table->iteratorKVList);
-	lst_Free(table->collisionsList);
-	free(table->array);
+void _RemoveAllElementsByHand(struct HashTable *table)
+{
+	for (int i = 0; i < table->size; ++i)
+	{
+		if (table->array[i] == NULL)
+			continue;
+
+		_RemoveKeyValuePairAtIndex(table, i);
+	}
 }
 
 static void _FreeTableStructButLeakContents(struct HashTable *table)
@@ -215,8 +231,12 @@ void htbl_SetValueForKey(struct HashTable *table, void *value, char *key)
 	if (value == NULL)
 		return;
 
+	size_t len = strlen(key);
+	char backedUpKey[len + 1];
+	memcpy(backedUpKey, key, len + 1);
+
 	_OptimizeTable(table);
-	_SetValueForKey(table, value, key);
+	_SetValueForKey(table, value, backedUpKey);
 }
 
 static void _AddKeyValuePair(struct HashTable *table, char *key, void *value)
@@ -230,7 +250,7 @@ static void _AddKeyValuePair(struct HashTable *table, char *key, void *value)
 	} else
 			// Otherwise do collision way
 	{
-		index = _FindEmptyIndexForKey(table, key, index);
+		index = _FindEmptyIndexAfterIndex(table, index);
 		if (index == -1)
 			return;
 
@@ -241,8 +261,12 @@ static void _AddKeyValuePair(struct HashTable *table, char *key, void *value)
 	if (successfullyAddedIndex == -1)
 		return;
 
-	struct KeyValueList *iteratorKVList = table->iteratorKVList;
-	lst_SetValueForKey(iteratorKVList, index, key);
+	lst_SetValueForKey(table->iteratorKVList, index, key);
+	if (lst_ValueForKey(table->iteratorKVList, key) != index)
+	{
+		_RemoveKeyValuePairAtIndex(table, index);
+	}
+
 }
 
 #pragma mark Removing
@@ -255,7 +279,15 @@ void htbl_RemoveKey(struct HashTable *table, char *key)
 	if (strlen(key) == 0)
 		return;
 
-	_RemoveKeyValuePair(table, key);
+	/*	Passing in a ptr to a key In a table will
+		couse a loosing one after a removal of element, so we backup
+		the key.
+	 */
+	size_t len = strlen(key);
+	char backedUpKey[len + 1];
+	memcpy(backedUpKey, key, len + 1);
+
+	_RemoveKeyValuePair(table, backedUpKey);
 }
 
 static void _RemoveKeyValuePair(struct HashTable *table, char *key)
@@ -263,14 +295,16 @@ static void _RemoveKeyValuePair(struct HashTable *table, char *key)
 	tindex_t index = _FindExistingIndexForKey(table, key);
 	if (index == -1)
 		return;
-
 	_RemoveKeyValuePairAtIndex(table, index);
-	lst_RemoveElementWithKey(table->iteratorKVList, key);
-	lst_RemoveElementWithKey(table->collisionsList, key);
 }
 
 static void _RemoveKeyValuePairAtIndex(struct HashTable *table, tindex_t index)
 {
+	struct HashTableElement *element = _ElementAtIndex(table, index);
+	char *key = element->key;
+	lst_RemoveElementWithKey(table->iteratorKVList, key);
+	lst_RemoveElementWithKey(table->collisionsList, key);
+
 	struct HashTableElement **array = table->array;
 	_FreeElement(array[index]);
 	array[index] = NULL;
@@ -314,12 +348,15 @@ static void _SetCollisionKeyValuePairAtIndex(struct HashTable *table, char *key,
 {
 	_SetKeyValuePairAtIndex(table, key, value, index);
 
-	struct HashTableElement *successfullyAddedElement = table->array[index];
+	struct HashTableElement *successfullyAddedElement = _ElementAtIndex(table, index);
 	if (successfullyAddedElement == NULL)
 		return;
 
-	struct KeyValueList *collisionList = table->collisionsList;
-	lst_SetValueForKey(collisionList, index, key);
+	lst_SetValueForKey(table->collisionsList, index, key);
+	if (lst_ValueForKey(table->collisionsList, key) == -1)
+	{
+		_RemoveKeyValuePairAtIndex(table, index);
+	}
 }
 
 #pragma mark Getters
@@ -387,7 +424,7 @@ static tindex_t _FindExistingIndexForKey(struct HashTable *table, char *key)
 	return -1;
 }
 
-static tindex_t _FindEmptyIndexForKey(struct HashTable *table, char *key, tindex_t startIndex)
+static tindex_t _FindEmptyIndexAfterIndex(struct HashTable *table, tindex_t startIndex)
 {
 	tindex_t currentIndex = startIndex;
 
@@ -416,7 +453,10 @@ static void _ResizeTable(struct HashTable *table, size_t newSize)
 
 	struct HashTableIterator *iterator = htbl_IteratorForTable(table);
 	if (iterator == NULL)
+	{
+		htbl_Free(tmpTable);
 		return;
+	}
 
 	while (htbl_IsValidIterator(iterator))
 	{
@@ -436,6 +476,13 @@ size_t htbl_TableSize(struct HashTable *table)
 	if (table == NULL)
 		return 0;
 	return (size_t) table->size;
+}
+
+size_t htbl_Count(struct HashTable *table)
+{
+	if (table == NULL)
+		return 0;
+	return (size_t) table->count;
 }
 
 tindex_t _HashFunction(char *key, tindex_t limit)
@@ -513,7 +560,7 @@ static struct HashTableIterator *_AllocateIterator()
 static struct HashTableIterator *_InitIterator(struct HashTableIterator *iterator, struct HashTable *table)
 {
 	struct KeyValueListIterator *listIterator = lst_IteratorForList(table->iteratorKVList);
-	if (listIterator == NULL)
+	if (lst_IsIteratorValid(listIterator) == 0)
 	{
 		free(iterator->cheshire);
 		free(iterator);
@@ -536,7 +583,7 @@ static void _IteratorNextFunction(struct HashTableIterator *iterator)
 
 	struct KeyValueListIterator *listIterator = iterator->cheshire->listIterator;
 	listIterator->next(listIterator);
-	if (listIterator->key == NULL)
+	if (listIterator->key == NULL || strlen(listIterator->key) == 0)
 	{
 		_InvalidateIterator(iterator);
 		return;
